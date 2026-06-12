@@ -1,0 +1,274 @@
+{
+  "_meta": {
+    "name": "Nigeria Tax Rates — NTA 2025",
+    "authority": "Nigeria Revenue Service (NRS) / FIRS",
+    "legislation": "Nigeria Tax Act 2025",
+    "version": "1.0.0",
+    "effective_date": "2025-01-01",
+    "tag": "b3Ɛq Nigerian Accountancy",
+    "notes": "CIT headline rate transitions to 25% from 2026 YOA — update when FIRS guidance published"
+  },
+
+  "vat": {
+    "label": "Value Added Tax (VAT)",
+    "authority": "NRS/FIRS",
+    "legislation": "VATA Cap V1 LFN 2004 as amended by NTA 2025",
+    "filing_deadline": "21st of following month",
+    "remittance_deadline": "21st of following month",
+    "portal": "TaxPro Max (taxpromax.firs.gov.ng)",
+    "rates": [
+      {
+        "code": "NG-VAT-75",
+        "label": "Standard Rate",
+        "rate": 0.075,
+        "rate_display": "7.5%",
+        "account_output": "2100",
+        "account_input": "1101",
+        "applies_to": "All taxable goods and services",
+        "notes": "Default rate for all B2B and B2C transactions in Nigeria"
+      },
+      {
+        "code": "NG-VAT-0Z",
+        "label": "Zero-Rated",
+        "rate": 0.00,
+        "rate_display": "0%",
+        "account_output": "2101",
+        "account_input": "1101",
+        "applies_to": "Exports, humanitarian relief goods, diplomatic purchases",
+        "notes": "Input VAT is fully recoverable on zero-rated supplies"
+      },
+      {
+        "code": "NG-VAT-EX",
+        "label": "Exempt",
+        "rate": 0.00,
+        "rate_display": "N/A",
+        "account_output": null,
+        "account_input": null,
+        "applies_to": "Basic food items, medical products, educational materials, agricultural inputs",
+        "notes": "No VAT charged; no input VAT recovery on related costs"
+      }
+    ]
+  },
+
+  "cit": {
+    "label": "Companies Income Tax (CIT)",
+    "authority": "NRS/FIRS",
+    "legislation": "NTA 2025 §56",
+    "filing_deadline": "June 30 (6 months after year-end for Dec 31 companies)",
+    "portal": "TaxPro Max",
+    "rates": [
+      {
+        "code": "NG-CIT-SMALL",
+        "label": "Small Company",
+        "rate": 0.00,
+        "rate_display": "0%",
+        "threshold": { "turnover_max": 100000000 },
+        "account_expense": "7000",
+        "account_payable": "2130",
+        "notes": "Turnover ≤ ₦100m. Also exempt from CGT and Development Levy."
+      },
+      {
+        "code": "NG-CIT-MEDIUM",
+        "label": "Medium Company",
+        "rate": 0.20,
+        "rate_display": "20%",
+        "threshold": { "turnover_min": 100000001, "turnover_max": 1000000000 },
+        "account_expense": "7000",
+        "account_payable": "2130",
+        "notes": "Turnover ₦100m–₦1bn. Transitional rate under NTA 2025."
+      },
+      {
+        "code": "NG-CIT-LARGE",
+        "label": "Large Company",
+        "rate": 0.30,
+        "rate_display": "30%",
+        "threshold": { "turnover_min": 1000000001 },
+        "account_expense": "7000",
+        "account_payable": "2130",
+        "notes": "Turnover > ₦1bn. Note: transitions to 25% from 2026 YOA per NTA 2025 §56."
+      },
+      {
+        "code": "NG-MINTAX",
+        "label": "Minimum Tax",
+        "rate": 0.005,
+        "rate_display": "0.5% of gross turnover",
+        "base": "gross_turnover",
+        "account_expense": "7004",
+        "account_payable": "2130",
+        "notes": "Applies where CIT computed is less than minimum tax. Not applicable to small companies."
+      }
+    ]
+  },
+
+  "development_levy": {
+    "label": "Development Levy",
+    "authority": "NRS/FIRS",
+    "legislation": "NTA 2025 (replaces Education Tax under TETFUND Act)",
+    "filing_deadline": "With CIT annual return",
+    "rates": [
+      {
+        "code": "NG-DEVLEVY",
+        "label": "Development Levy",
+        "rate": 0.04,
+        "rate_display": "4%",
+        "base": "assessable_profit",
+        "account_expense": "7001",
+        "account_payable": "2131",
+        "notes": "Small companies (≤₦100m turnover) are exempt. Charged on same base as CIT."
+      }
+    ]
+  },
+
+  "wht": {
+    "label": "Withholding Tax (WHT)",
+    "authority": "NRS/FIRS",
+    "legislation": "WHT Regulations 2024 (effective 1 Jan 2025)",
+    "filing_deadline": "21st of following month",
+    "credit_cert_deadline": "30 days of deduction",
+    "credit_form": "Form A (WHT Credit Certificate)",
+    "small_company_exemption": {
+      "applies": true,
+      "threshold_monthly": 2000000,
+      "condition": "Vendor must have valid TIN. Payer must be a small company (≤₦100m turnover)."
+    },
+    "no_tin_penalty": {
+      "multiplier": 2,
+      "cap": 0.20,
+      "note": "If vendor has no valid TIN, WHT rate doubles (max 20%)"
+    },
+    "rates": [
+      { "code": "NG-WHT-DIV", "label": "Dividends",                                    "rate": 0.10, "rate_display": "10%", "account_payable": "2110", "notes": "Final tax for non-residents" },
+      { "code": "NG-WHT-INT", "label": "Interest",                                     "rate": 0.10, "rate_display": "10%", "account_payable": "2111", "notes": "Includes CBN T-Bills" },
+      { "code": "NG-WHT-RNT", "label": "Rent",                                         "rate": 0.10, "rate_display": "10%", "account_payable": "2112", "notes": "Payable by tenant on gross rent" },
+      { "code": "NG-WHT-ROY", "label": "Royalties",                                    "rate": 0.10, "rate_display": "10%", "account_payable": "2118", "notes": "" },
+      { "code": "NG-WHT-DIR", "label": "Director Fees",                                "rate": 0.10, "rate_display": "10%", "account_payable": "2115", "notes": "" },
+      { "code": "NG-WHT-PRF", "label": "Professional Fees (Legal/Audit/Tax)",          "rate": 0.10, "rate_display": "10%", "account_payable": "2114", "notes": "" },
+      { "code": "NG-WHT-TEC", "label": "Technical / Management / Consulting Services", "rate": 0.10, "rate_display": "10%", "account_payable": "2116", "notes": "" },
+      { "code": "NG-WHT-COM", "label": "Commission / Agency Fees",                     "rate": 0.10, "rate_display": "10%", "account_payable": "2117", "notes": "" },
+      { "code": "NG-WHT-SUP", "label": "Contracts & Supply (Goods)",                   "rate": 0.05, "rate_display": "5%",  "account_payable": "2113", "notes": "Supply of goods and general contracts" },
+      { "code": "NG-WHT-CON", "label": "Construction / Drilling / Survey",             "rate": 0.025,"rate_display": "2.5%","account_payable": "2119", "notes": "" }
+    ]
+  },
+
+  "paye": {
+    "label": "PAYE (Personal Income Tax)",
+    "authority": "State IRS (employees in state) / FIRS (federal employees)",
+    "legislation": "NTA 2025 §§130–160, PITA Cap P8",
+    "filing_deadline": "10th of following month",
+    "annual_return_deadline": "January 31 (Form H1)",
+    "consolidated_relief_allowance": {
+      "formula": "Higher of ₦200,000 or (1% of gross income) PLUS 20% of gross income",
+      "note": "Deducted from gross income before applying bands"
+    },
+    "bands": [
+      { "band": 1, "from": 0,        "to": 800000,   "rate": 0.07, "rate_display": "7%"  },
+      { "band": 2, "from": 800001,   "to": 2400000,  "rate": 0.11, "rate_display": "11%" },
+      { "band": 3, "from": 2400001,  "to": 4800000,  "rate": 0.15, "rate_display": "15%" },
+      { "band": 4, "from": 4800001,  "to": 8000000,  "rate": 0.19, "rate_display": "19%" },
+      { "band": 5, "from": 8000001,  "to": 16000000, "rate": 0.21, "rate_display": "21%" },
+      { "band": 6, "from": 16000001, "to": null,      "rate": 0.24, "rate_display": "24%" }
+    ],
+    "account_payable": "2120",
+    "account_expense": "6001"
+  },
+
+  "cgt": {
+    "label": "Capital Gains Tax (CGT)",
+    "authority": "NRS/FIRS",
+    "legislation": "NTA 2025 (CGT rate aligned with CIT)",
+    "filing_deadline": "With CIT annual return",
+    "rates": [
+      { "code": "NG-CGT-CO",  "label": "Companies",   "rate": 0.30, "rate_display": "30%", "notes": "Same as CIT headline; small companies exempt" },
+      { "code": "NG-CGT-IND", "label": "Individuals", "rate": 0.10, "rate_display": "10%", "notes": "" }
+    ],
+    "account_expense": "7002",
+    "account_payable": "2132"
+  },
+
+  "stamp_duty": {
+    "label": "Stamp Duty",
+    "authority": "NRS/FIRS (federal) and SIRS (state)",
+    "legislation": "Stamp Duties Act Cap S8 as amended",
+    "filing_deadline": "30 days of executing instrument",
+    "rates": [
+      { "instrument": "Agreement / Contract",             "rate_display": "₦500 flat",              "base": "per document" },
+      { "instrument": "Bank Electronic Transfer ≥₦10,000","rate_display": "₦50 flat",               "base": "per transfer" },
+      { "instrument": "Memoranda & Articles of Association","rate_display": "0.75%",                 "base": "nominal share capital" },
+      { "instrument": "Tenancy Agreement (≤ 1 year)",     "rate_display": "0.78%",                  "base": "annual rent" },
+      { "instrument": "Tenancy Agreement (1–7 years)",    "rate_display": "3%",                     "base": "annual rent" },
+      { "instrument": "Tenancy Agreement (> 7 years)",    "rate_display": "6%",                     "base": "annual rent" },
+      { "instrument": "Deed of Conveyance / Transfer",    "rate_display": "1.5%",                   "base": "consideration value" }
+    ],
+    "account_payable": "2133"
+  },
+
+  "statutory_levies": {
+    "label": "Statutory Payroll Levies",
+    "rates": [
+      {
+        "code": "NG-PEN-EMP",
+        "label": "Employer Pension Contribution",
+        "rate": 0.10, "rate_display": "10%",
+        "base": "basic_salary + housing_allowance + transport_allowance",
+        "remit_to": "Employee PFA (Pension Fund Administrator)",
+        "deadline": "7 days after salary payment date",
+        "legislation": "Pension Reform Act 2014 (PRA 2014)",
+        "account_expense": "6002", "account_payable": "2121"
+      },
+      {
+        "code": "NG-PEN-EE",
+        "label": "Employee Pension Contribution",
+        "rate": 0.08, "rate_display": "8%",
+        "base": "basic_salary + housing_allowance + transport_allowance",
+        "remit_to": "Employee PFA",
+        "deadline": "7 days after salary payment date",
+        "legislation": "PRA 2014",
+        "account_payable": "2122",
+        "note": "Deducted from employee gross pay, not an employer cost"
+      },
+      {
+        "code": "NG-NHF",
+        "label": "National Housing Fund (NHF)",
+        "rate": 0.025, "rate_display": "2.5%",
+        "base": "employee_basic_salary",
+        "remit_to": "Federal Mortgage Bank of Nigeria (FMBN)",
+        "deadline": "1st week of following month",
+        "legislation": "NHF Act Cap N45",
+        "account_payable": "2123",
+        "note": "Deducted from employee basic salary"
+      },
+      {
+        "code": "NG-NSITF",
+        "label": "NSITF (Employees Compensation Scheme)",
+        "rate": 0.01, "rate_display": "1%",
+        "base": "gross_monthly_payroll",
+        "remit_to": "Nigeria Social Insurance Trust Fund (NSITF)",
+        "deadline": "Last day of following month",
+        "legislation": "Employees Compensation Act 2010 (ECA 2010)",
+        "account_expense": "6003", "account_payable": "2124"
+      },
+      {
+        "code": "NG-ITF",
+        "label": "Industrial Training Fund (ITF) Levy",
+        "rate": 0.01, "rate_display": "1%",
+        "base": "annual_gross_payroll",
+        "remit_to": "Industrial Training Fund",
+        "deadline": "April 1 of following year",
+        "legislation": "ITF Act Cap I9",
+        "threshold": "Applies to companies with ≥5 employees OR annual turnover ≥₦50m",
+        "account_expense": "6004", "account_payable": "2125"
+      },
+      {
+        "code": "NG-NITDA",
+        "label": "NITDA Levy",
+        "rate": 0.01, "rate_display": "1%",
+        "base": "profit_before_tax",
+        "remit_to": "National Information Technology Development Agency",
+        "deadline": "With CIT return",
+        "legislation": "NITDA Act 2007",
+        "applies_to": "IT and telecommunications companies only",
+        "account_expense": null, "account_payable": "2126"
+      }
+    ]
+  }
+}

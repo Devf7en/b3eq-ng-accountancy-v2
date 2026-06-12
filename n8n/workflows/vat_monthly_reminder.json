@@ -1,0 +1,143 @@
+{
+  "name": "b3Ɛq NG — VAT Monthly Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 9 15 * *" }]
+        }
+      },
+      "name": "Cron — 15th of Month 09:00 WAT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300],
+      "id": "node-cron-vat"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.DOLI_URL }}/api/index.php/invoices",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "DOLAPIKEY", "value": "={{ $env.DOLI_API_KEY }}" }]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "datestart", "value": "={{ $now.minus({months:1}).startOf('month').toFormat('yyyy-MM-dd') }}" },
+            { "name": "dateend",   "value": "={{ $now.minus({months:1}).endOf('month').toFormat('yyyy-MM-dd') }}" },
+            { "name": "status",    "value": "1" },
+            { "name": "limit",     "value": "500" }
+          ]
+        }
+      },
+      "name": "Fetch Sales Invoices (prev month)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [460, 200],
+      "id": "node-fetch-sales"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.DOLI_URL }}/api/index.php/supplierinvoices",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "DOLAPIKEY", "value": "={{ $env.DOLI_API_KEY }}" }]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "datestart", "value": "={{ $now.minus({months:1}).startOf('month').toFormat('yyyy-MM-dd') }}" },
+            { "name": "dateend",   "value": "={{ $now.minus({months:1}).endOf('month').toFormat('yyyy-MM-dd') }}" },
+            { "name": "status",    "value": "1" },
+            { "name": "limit",     "value": "500" }
+          ]
+        }
+      },
+      "name": "Fetch Purchase Invoices (prev month)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [460, 400],
+      "id": "node-fetch-purchases"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ── b3Ɛq VAT Calculation Node ──────────────────────────────\n// NTA 2025 · Standard Rate 7.5%\n\nconst VAT_RATE = 0.075;\n\nconst salesInvoices   = $('Fetch Sales Invoices (prev month)').all()[0]?.json || [];\nconst purchaseInvoices = $('Fetch Purchase Invoices (prev month)').all()[0]?.json || [];\n\nconst period = new Date();\nperiod.setMonth(period.getMonth() - 1);\nconst periodLabel = period.toLocaleString('en-NG', { month: 'long', year: 'numeric' });\nconst deadlineDay = 21;\nconst deadlineMonth = period.getMonth() + 2; // next month\nconst deadlineYear  = deadlineMonth > 12 ? period.getFullYear() + 1 : period.getFullYear();\nconst deadlineLabel = `${String(deadlineMonth > 12 ? 1 : deadlineMonth).padStart(2,'0')}/21/${deadlineYear}`;\n\nlet outputVATBase = 0;\nlet outputVAT     = 0;\n\nif (Array.isArray(salesInvoices)) {\n  for (const inv of salesInvoices) {\n    const total = parseFloat(inv.total_ht ?? inv.total_ttc ?? 0);\n    const tva   = parseFloat(inv.total_tva ?? 0);\n    outputVATBase += total;\n    outputVAT     += tva > 0 ? tva : total * VAT_RATE;\n  }\n}\n\nlet inputVATBase = 0;\nlet inputVAT     = 0;\n\nif (Array.isArray(purchaseInvoices)) {\n  for (const inv of purchaseInvoices) {\n    const total = parseFloat(inv.total_ht ?? inv.total_ttc ?? 0);\n    const tva   = parseFloat(inv.total_tva ?? 0);\n    inputVATBase += total;\n    inputVAT     += tva > 0 ? tva : total * VAT_RATE;\n  }\n}\n\nconst netVAT   = outputVAT - inputVAT;\nconst payable  = Math.max(netVAT, 0);\nconst refund   = Math.max(-netVAT, 0);\n\nconst fmt = n => '₦' + n.toLocaleString('en-NG', {minimumFractionDigits:2, maximumFractionDigits:2});\n\nreturn [{\n  json: {\n    period:           periodLabel,\n    deadline:         deadlineLabel,\n    sales_count:      Array.isArray(salesInvoices) ? salesInvoices.length : 0,\n    purchase_count:   Array.isArray(purchaseInvoices) ? purchaseInvoices.length : 0,\n    output_vat_base:  outputVATBase,\n    output_vat:       outputVAT,\n    input_vat_base:   inputVATBase,\n    input_vat:        inputVAT,\n    net_vat:          netVAT,\n    payable:          payable,\n    refundable:       refund,\n    status:           payable > 0 ? 'PAYABLE' : (refund > 0 ? 'REFUND' : 'NIL'),\n    summary_text: [\n      `📊 *b3Ɛq VAT Summary — ${periodLabel}*`,\n      ``,\n      `• Sales Invoices:     ${Array.isArray(salesInvoices) ? salesInvoices.length : 0}`,\n      `• Output VAT (7.5%):  ${fmt(outputVAT)}`,\n      `• Purchase Invoices:  ${Array.isArray(purchaseInvoices) ? purchaseInvoices.length : 0}`,\n      `• Input VAT:          ${fmt(inputVAT)}`,\n      ``,\n      payable > 0\n        ? `💳 *VAT PAYABLE: ${fmt(payable)}*`\n        : `✅ *VAT REFUND / CREDIT: ${fmt(refund)}*`,\n      ``,\n      `⏰ Deadline: 21st (file on TaxPro Max)`,\n      `🏛 Authority: NRS/FIRS`,\n      `📎 Reference: VATA as amended by NTA 2025`,\n    ].join('\\n')\n  }\n}];"
+      },
+      "name": "Calculate VAT Return",
+      "type": "n8n-nodes-base.code",
+      "position": [700, 300],
+      "id": "node-calc-vat"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.payable }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ]
+        }
+      },
+      "name": "Has VAT Payable?",
+      "type": "n8n-nodes-base.if",
+      "position": [920, 300],
+      "id": "node-if-vat"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "text",
+            "value": "={{ $('Calculate VAT Return').item.json.summary_text }}"
+          }]
+        }
+      },
+      "name": "Notify — VAT Payable",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1140, 200],
+      "id": "node-notify-payable"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "text",
+            "value": "={{ $('Calculate VAT Return').item.json.summary_text }}"
+          }]
+        }
+      },
+      "name": "Notify — VAT Nil/Refund",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1140, 400],
+      "id": "node-notify-nil"
+    }
+  ],
+  "connections": {
+    "Cron — 15th of Month 09:00 WAT": {
+      "main": [[
+        { "node": "Fetch Sales Invoices (prev month)",    "type": "main", "index": 0 },
+        { "node": "Fetch Purchase Invoices (prev month)", "type": "main", "index": 0 }
+      ]]
+    },
+    "Fetch Sales Invoices (prev month)":    { "main": [[{ "node": "Calculate VAT Return", "type": "main", "index": 0 }]] },
+    "Fetch Purchase Invoices (prev month)": { "main": [[{ "node": "Calculate VAT Return", "type": "main", "index": 0 }]] },
+    "Calculate VAT Return":  { "main": [[{ "node": "Has VAT Payable?", "type": "main", "index": 0 }]] },
+    "Has VAT Payable?": {
+      "main": [
+        [{ "node": "Notify — VAT Payable",   "type": "main", "index": 0 }],
+        [{ "node": "Notify — VAT Nil/Refund", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["b3Ɛq Nigerian Accountancy", "VAT", "NTA 2025", "Compliance"]
+}

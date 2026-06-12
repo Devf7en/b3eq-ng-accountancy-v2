@@ -1,0 +1,88 @@
+{
+  "name": "b3Ɛq NG — OCR Invoice Ingestion Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST", "path": "b3eq-ng-invoice-ocr",
+        "responseMode": "lastNode", "options": {}
+      },
+      "name": "Webhook — Invoice Upload",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300], "id": "node-webhook-ocr",
+      "notes": "POST multipart/form-data: { file: PDF/image, entity_id?, vendor_name? }"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const body = $input.all()[0].json;\nconst files = $input.all()[0].binary || {};\nconst fileKey = Object.keys(files)[0];\nif (!fileKey) throw new Error('No file attached. POST with multipart/form-data: file=<PDF or image>');\nreturn [{ json: { fileKey, vendor_hint: body.vendor_name || '', entity_id: body.entity_id || 1 }, binary: files }];"
+      },
+      "name": "Validate Upload", "type": "n8n-nodes-base.code",
+      "position": [460, 300], "id": "node-validate"
+    },
+    {
+      "parameters": {
+        "url": "https://api.mindee.net/v1/products/mindee/invoices/v4/predict",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "Token {{ $env.MINDEE_API_KEY }}" }] },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [{ "name": "document", "value": "={{ $binary[$json.fileKey] }}", "parameterType": "formBinaryData", "inputDataFieldName": "={{ $json.fileKey }}" }]
+        }
+      },
+      "name": "Mindee OCR — Extract Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [680, 300], "id": "node-mindee"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse Mindee OCR response into structured invoice data\nconst ocr = $input.all()[0].json;\nconst prediction = ocr?.document?.inference?.prediction || {};\n\nconst fmt = (field) => field?.value || null;\nconst fmtAmount = (field) => field?.value ? parseFloat(field.value) : 0;\n\nconst vendor     = fmt(prediction.supplier_name)       || $('Validate Upload').all()[0].json.vendor_hint || 'Unknown Vendor';\nconst invoice_no = fmt(prediction.invoice_number)      || 'OCR-' + Date.now();\nconst inv_date   = fmt(prediction.date)                || new Date().toISOString().split('T')[0];\nconst due_date   = fmt(prediction.due_date)            || null;\nconst total_net  = fmtAmount(prediction.total_net);\nconst total_tax  = fmtAmount(prediction.total_tax);\nconst total_incl = fmtAmount(prediction.total_amount)  || (total_net + total_tax);\nconst currency   = fmt(prediction.locale?.currency)    || 'NGN';\n\n// Determine WHT code from vendor/line items (heuristic)\nconst desc_raw   = (prediction.line_items || []).map(l => l.description || '').join(' ').toLowerCase();\nlet wht_code = 'NG-WHT-SUP'; // default\nif (desc_raw.includes('legal') || desc_raw.includes('audit') || desc_raw.includes('tax')) wht_code = 'NG-WHT-PRF';\nelse if (desc_raw.includes('consult') || desc_raw.includes('manage') || desc_raw.includes('service')) wht_code = 'NG-WHT-TEC';\nelse if (desc_raw.includes('rent') || desc_raw.includes('lease')) wht_code = 'NG-WHT-RNT';\nelse if (desc_raw.includes('construct') || desc_raw.includes('build') || desc_raw.includes('civil')) wht_code = 'NG-WHT-CON';\n\n// Calculate WHT\nconst WHT_RATES = { 'NG-WHT-SUP':0.05,'NG-WHT-PRF':0.10,'NG-WHT-TEC':0.10,'NG-WHT-RNT':0.10,'NG-WHT-CON':0.025 };\nconst wht_rate   = WHT_RATES[wht_code] || 0.05;\nconst wht_amount = parseFloat((total_net * wht_rate).toFixed(2));\nconst net_payable = parseFloat((total_net - wht_amount).toFixed(2));\n\n// VAT check (NTA 2025: 7.5%)\nconst expected_vat = parseFloat((total_net * 0.075).toFixed(2));\nconst vat_variance = parseFloat(Math.abs(total_tax - expected_vat).toFixed(2));\n\nreturn [{ json: {\n  ocr_confidence: ocr?.document?.n_pages > 0 ? 'OK' : 'LOW',\n  vendor_name:    vendor,\n  invoice_number: invoice_no,\n  invoice_date:   inv_date,\n  due_date,\n  currency,\n  total_net,\n  total_tax,\n  total_incl,\n  wht_code,\n  wht_rate:       (wht_rate * 100).toFixed(1) + '%',\n  wht_amount,\n  net_payable,\n  expected_vat,\n  vat_variance,\n  vat_ok:         vat_variance < 100,\n  staged_for_review: vat_variance >= 100 || total_net <= 0,\n  entity_id:      $('Validate Upload').all()[0].json.entity_id\n} }];"
+      },
+      "name": "Parse OCR & Calculate Taxes",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 300], "id": "node-parse-ocr"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "leftValue": "={{ $json.staged_for_review }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }]
+        }
+      },
+      "name": "Needs Review?", "type": "n8n-nodes-base.if",
+      "position": [1120, 300], "id": "node-review-check"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}", "method": "POST", "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "text", "value": "={{ '⚠️ *b3Ɛq OCR Invoice — Needs Review*\\n\\nVendor: ' + $json.vendor_name + '\\nInvoice: ' + $json.invoice_number + '\\nNet Amount: ₦' + $json.total_net.toLocaleString() + '\\nVAT Variance: ₦' + $json.vat_variance + '\\nStatus: Staged — please verify before posting' }}" }] }
+      },
+      "name": "Alert — Needs Review", "type": "n8n-nodes-base.httpRequest",
+      "position": [1340, 200], "id": "node-alert-review"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}", "method": "POST", "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "text", "value": "={{ '✅ *b3Ɛq OCR Invoice Processed*\\n\\nVendor: ' + $json.vendor_name + '\\nInvoice #: ' + $json.invoice_number + '\\nDate: ' + $json.invoice_date + '\\nNet: ₦' + $json.total_net.toLocaleString() + '\\nVAT (7.5%): ₦' + $json.total_tax.toLocaleString() + '\\nWHT (' + $json.wht_code + ' ' + $json.wht_rate + '): ₦' + $json.wht_amount.toLocaleString() + '\\nNet Payable: ₦' + $json.net_payable.toLocaleString() + '\\n\\n→ Post via WHT Calculator page' }}" }] }
+      },
+      "name": "Notify — Invoice Ready", "type": "n8n-nodes-base.httpRequest",
+      "position": [1340, 400], "id": "node-notify-ready"
+    }
+  ],
+  "connections": {
+    "Webhook — Invoice Upload":      { "main": [[{ "node": "Validate Upload",           "type": "main", "index": 0 }]] },
+    "Validate Upload":               { "main": [[{ "node": "Mindee OCR — Extract Invoice","type": "main", "index": 0 }]] },
+    "Mindee OCR — Extract Invoice":  { "main": [[{ "node": "Parse OCR & Calculate Taxes","type": "main", "index": 0 }]] },
+    "Parse OCR & Calculate Taxes":   { "main": [[{ "node": "Needs Review?",              "type": "main", "index": 0 }]] },
+    "Needs Review?": {
+      "main": [
+        [{ "node": "Alert — Needs Review",    "type": "main", "index": 0 }],
+        [{ "node": "Notify — Invoice Ready",  "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["b3Ɛq Nigerian Accountancy", "OCR", "Accounts Payable", "Automation"]
+}

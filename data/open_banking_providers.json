@@ -1,0 +1,106 @@
+{
+  "_meta": {
+    "name": "b3Ɛq Open Banking & Bank Feed Providers",
+    "version": "2.0.0",
+    "tag": "b3Ɛq Nigerian Accountancy",
+    "notes": "Routing config for the open_banking_sync n8n workflow. Nigerian banks + international open finance APIs."
+  },
+  "nigerian_banks": [
+    { "id": "gtb",        "name": "Guaranty Trust Bank",   "sort_code": "058",  "open_banking": false, "manual_csv": true,  "csv_format": "GTB_EXPORT" },
+    { "id": "zenith",     "name": "Zenith Bank",           "sort_code": "057",  "open_banking": false, "manual_csv": true,  "csv_format": "ZENITH_EXPORT" },
+    { "id": "access",     "name": "Access Bank",           "sort_code": "044",  "open_banking": false, "manual_csv": true,  "csv_format": "ACCESS_EXPORT" },
+    { "id": "uba",        "name": "United Bank for Africa","sort_code": "033",  "open_banking": false, "manual_csv": true,  "csv_format": "UBA_EXPORT" },
+    { "id": "firstbank",  "name": "First Bank of Nigeria", "sort_code": "011",  "open_banking": false, "manual_csv": true,  "csv_format": "FIRSTBANK_EXPORT" },
+    { "id": "fcmb",       "name": "FCMB",                  "sort_code": "214",  "open_banking": false, "manual_csv": true,  "csv_format": "FCMB_EXPORT" },
+    { "id": "stanbic",    "name": "Stanbic IBTC",          "sort_code": "221",  "open_banking": false, "manual_csv": true,  "csv_format": "STANBIC_EXPORT" },
+    { "id": "sterling",   "name": "Sterling Bank",         "sort_code": "232",  "open_banking": true,  "api_provider": "mono", "manual_csv": true }
+  ],
+  "open_finance_providers": [
+    {
+      "id": "mono",
+      "name": "Mono (Nigeria)",
+      "url": "https://api.withmono.com",
+      "coverage": "Nigeria — 40+ banks including GTB, Zenith, Access, UBA, FirstBank",
+      "auth_type": "API_KEY",
+      "endpoints": {
+        "accounts":     "GET /v2/accounts/{accountId}",
+        "transactions": "GET /v2/accounts/{accountId}/transactions",
+        "statement":    "GET /v2/accounts/{accountId}/statement"
+      },
+      "env_var": "MONO_SECRET_KEY",
+      "notes": "Best option for Nigerian bank feed automation. Requires customer consent flow.",
+      "pricing": "Pay-per-call. Free tier available.",
+      "docs": "https://docs.mono.co"
+    },
+    {
+      "id": "okra",
+      "name": "Okra (Nigeria)",
+      "url": "https://api.okra.ng",
+      "coverage": "Nigeria — 30+ banks",
+      "auth_type": "API_KEY",
+      "endpoints": {
+        "transactions": "POST /v2/products/transactions",
+        "balance":      "POST /v2/products/balance"
+      },
+      "env_var": "OKRA_SECRET_KEY",
+      "notes": "Alternative to Mono. Strong for balance and transaction history.",
+      "docs": "https://docs.okra.ng"
+    },
+    {
+      "id": "nordigen",
+      "name": "Nordigen / GoCardless (Europe)",
+      "url": "https://bankaccountdata.gocardless.com/api/v2",
+      "coverage": "EU/UK — for domiciliary account holders with European bank accounts",
+      "auth_type": "BEARER",
+      "endpoints": {
+        "accounts":     "GET /api/v2/accounts/{id}/",
+        "transactions": "GET /api/v2/accounts/{id}/transactions/"
+      },
+      "env_var": "NORDIGEN_SECRET_KEY",
+      "notes": "Use for EUR/GBP domiciliary accounts linked to EU banks.",
+      "docs": "https://developer.gocardless.com/bank-account-data/overview"
+    },
+    {
+      "id": "plaid",
+      "name": "Plaid (US/Global)",
+      "url": "https://production.plaid.com",
+      "coverage": "US, Canada, UK — for USD domiciliary account holders",
+      "auth_type": "CLIENT_SECRET",
+      "env_var": "PLAID_SECRET",
+      "notes": "Use for USD domiciliary accounts linked to US banks. Requires Plaid Link flow.",
+      "docs": "https://plaid.com/docs"
+    }
+  ],
+  "csv_formats": {
+    "GTB_EXPORT": {
+      "delimiter": ",",
+      "date_col": "Transaction Date",
+      "desc_col": "Narration",
+      "debit_col": "Debit",
+      "credit_col": "Credit",
+      "balance_col": "Balance",
+      "date_format": "DD/MM/YYYY",
+      "skip_rows": 6
+    },
+    "ZENITH_EXPORT": {
+      "delimiter": ",",
+      "date_col": "Date",
+      "desc_col": "Remarks",
+      "debit_col": "Withdrawals",
+      "credit_col": "Deposits",
+      "balance_col": "Balance",
+      "date_format": "DD-MMM-YYYY",
+      "skip_rows": 0
+    },
+    "ACCESS_EXPORT": {
+      "delimiter": ",",
+      "date_col": "Transaction Date",
+      "desc_col": "Transaction Details",
+      "debit_col": "Debit Amount",
+      "credit_col": "Credit Amount",
+      "balance_col": "Balance",
+      "date_format": "YYYY-MM-DD",
+      "skip_rows": 1
+    }
+  }
+}

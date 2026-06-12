@@ -1,0 +1,74 @@
+{
+  "name": "b3Ɛq NG — FX Rate Sync (Daily CBN/Market Rates)",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "cronExpression", "expression": "0 7 * * 1-5" }] } },
+      "name": "Cron — Weekdays 07:00 WAT", "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300], "id": "node-cron-fx"
+    },
+    {
+      "parameters": {
+        "url": "https://open.er-api.com/v6/latest/NGN",
+        "options": {}
+      },
+      "name": "Fetch Exchange Rates (NGN base)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [460, 300], "id": "node-fetch-rates"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const data = $input.all()[0].json;\nconst rates = data.rates || {};\nconst today = new Date().toISOString().split('T')[0];\nconst currencies = ['USD','GBP','EUR','CHF','CAD','AUD','CNY','ZAR'];\nconst results = [];\n\nfor (const ccy of currencies) {\n  if (rates[ccy]) {\n    // API gives NGN per 1 unit of each CCY\n    // open.er-api gives: 1 NGN = X CCY, so rate_to_ngn = 1 / rates[ccy]\n    const rate_to_ngn = rates[ccy] > 0 ? parseFloat((1 / rates[ccy]).toFixed(4)) : 0;\n    results.push({ json: { currency_code: ccy, rate_to_ngn, rate_date: today, source: 'open.er-api.com' } });\n  }\n}\n\nreturn results.length > 0 ? results : [{ json: { error: 'No rates found', raw: data } }];"
+      },
+      "name": "Parse Rates", "type": "n8n-nodes-base.code",
+      "position": [680, 300], "id": "node-parse-rates"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.DOLI_URL }}/api/index.php/b3eqng/fx/rate",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "DOLAPIKEY", "value": "={{ $env.DOLI_API_KEY }}" }] },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "currency_code", "value": "={{ $json.currency_code }}" },
+            { "name": "rate_to_ngn",   "value": "={{ $json.rate_to_ngn }}" },
+            { "name": "rate_date",     "value": "={{ $json.rate_date }}" },
+            { "name": "source",        "value": "={{ $json.source }}" }
+          ]
+        }
+      },
+      "name": "Save Rate to b3Ɛq",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 300], "id": "node-save-rate"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst today = new Date().toISOString().split('T')[0];\nconst saved = items.filter(i => !i.json.error).length;\nconst lines = [\n  `💱 *b3Ɛq FX Rate Sync — ${today}*`,\n  ``,\n  `✓ ${saved} rates saved to b3Ɛq`,\n  `Currencies: USD GBP EUR CHF CAD AUD CNY ZAR`,\n  `Source: open.er-api.com (market mid-rates)`,\n  ``,\n  `Run FX Revaluation: Financial → Nigerian Accountancy → FX Revaluation`,\n];\nreturn [{ json: { summary: lines.join('\\n'), saved_count: saved } }];"
+      },
+      "name": "Build Summary", "type": "n8n-nodes-base.code",
+      "position": [1120, 300], "id": "node-summary"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}", "method": "POST",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "text", "value": "={{ $json.summary }}" }] }
+      },
+      "name": "Notify FX Sync", "type": "n8n-nodes-base.httpRequest",
+      "position": [1340, 300], "id": "node-notify-fx"
+    }
+  ],
+  "connections": {
+    "Cron — Weekdays 07:00 WAT": { "main": [[{ "node": "Fetch Exchange Rates (NGN base)", "type": "main", "index": 0 }]] },
+    "Fetch Exchange Rates (NGN base)": { "main": [[{ "node": "Parse Rates", "type": "main", "index": 0 }]] },
+    "Parse Rates":   { "main": [[{ "node": "Save Rate to b3Ɛq", "type": "main", "index": 0 }]] },
+    "Save Rate to b3Ɛq": { "main": [[{ "node": "Build Summary", "type": "main", "index": 0 }]] },
+    "Build Summary": { "main": [[{ "node": "Notify FX Sync", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["b3Ɛq Nigerian Accountancy", "FX", "IAS 21", "Automation"]
+}

@@ -1,0 +1,80 @@
+# b3Ɛq Nigerian Accountancy — English Language File
+# tagged: b3Ɛq Nigerian Accountancy
+# File: htdocs/custom/b3eqng/langs/en_US/b3eqng.lang
+
+B3EQNG_MODULENAME=Nigerian Accountancy (b3Ɛq)
+B3EQNG_MODULE_DESC=NTA 2025 compliant accounting for Nigerian entities
+
+# Navigation
+B3EQNG_NAV_COA=Chart of Accounts
+B3EQNG_NAV_TAXES=Tax Rates
+B3EQNG_NAV_WHT=WHT Calculator
+B3EQNG_NAV_VAT=VAT Return
+B3EQNG_NAV_COMPLIANCE=Compliance Calendar
+B3EQNG_NAV_SETUP=Settings
+
+# Page titles
+B3EQNG_COA_TITLE=Nigerian Chart of Accounts
+B3EQNG_COA_SUB=IFRS for SMEs · 90 accounts · FIRS-aligned coding
+B3EQNG_WHT_TITLE=Withholding Tax Calculator
+B3EQNG_WHT_SUB=NTA 2025 · WHT Regulations 2024
+B3EQNG_VAT_TITLE=VAT Declaration Workbench
+B3EQNG_VAT_SUB=VATA · 7.5% standard rate · Monthly filing by 21st
+B3EQNG_COMPLIANCE_TITLE=Compliance Calendar
+B3EQNG_COMPLIANCE_SUB=All NRS/FIRS filing and remittance deadlines
+
+# Labels
+B3EQNG_ACCOUNT_CODE=Account Code
+B3EQNG_ACCOUNT_NAME=Account Name
+B3EQNG_ACCOUNT_TYPE=Type
+B3EQNG_ACCOUNT_SUBTYPE=Sub-type
+B3EQNG_NORMAL_BALANCE=Dr/Cr
+B3EQNG_TAX_RATE=Rate
+B3EQNG_TAX_BASE=Tax Base
+B3EQNG_DEADLINE=Deadline
+B3EQNG_PENALTY=Late Penalty
+B3EQNG_AUTHORITY=Authority
+B3EQNG_LEGISLATION=Legislation
+
+# WHT
+B3EQNG_WHT_GROSS=Gross Payment Amount (₦)
+B3EQNG_WHT_TYPE=Transaction Type
+B3EQNG_WHT_TIN=Vendor has valid TIN
+B3EQNG_WHT_DEDUCTED=WHT Deducted
+B3EQNG_WHT_NET=Net Payable to Vendor
+B3EQNG_WHT_EXEMPT=EXEMPT — Small company + valid TIN + ≤₦2m/month
+B3EQNG_WHT_NOTIN=No-TIN penalty: rate doubled (max 20%)
+
+# VAT
+B3EQNG_VAT_OUTPUT=Output VAT (7.5%)
+B3EQNG_VAT_INPUT=Input VAT Recoverable
+B3EQNG_VAT_NET=Net VAT
+B3EQNG_VAT_PAYABLE=VAT Payable to NRS
+B3EQNG_VAT_REFUND=VAT Refund / Credit
+B3EQNG_VAT_PERIOD=Filing Period
+
+# CIT
+B3EQNG_CIT_SMALL=Small Company (≤₦100m) — 0% CIT
+B3EQNG_CIT_MEDIUM=Medium Company (₦100m–₦1bn) — 20% CIT
+B3EQNG_CIT_LARGE=Large Company (>₦1bn) — 30% CIT
+
+# Setup
+B3EQNG_SETUP_SIZE=Company Size Classification
+B3EQNG_SETUP_TIN=FIRS Tax Identification Number (TIN)
+B3EQNG_SETUP_VAT_REG=VAT Registration Number
+B3EQNG_SETUP_STATE=State of Registration
+B3EQNG_SETUP_VAT_REGISTERED=VAT Registered?
+B3EQNG_SETUP_FISCAL_START=Fiscal Year Start (MM-DD)
+B3EQNG_SETUP_FISCAL_END=Fiscal Year End (MM-DD)
+
+# Status
+B3EQNG_STATUS_GREEN=Filed & Remitted
+B3EQNG_STATUS_AMBER=Due Soon — Action Required
+B3EQNG_STATUS_RED=OVERDUE — Penalty Accruing
+
+# Buttons
+B3EQNG_BTN_CALCULATE=Calculate
+B3EQNG_BTN_GENERATE=Generate Return
+B3EQNG_BTN_POST_ENTRY=Post Journal Entry
+B3EQNG_BTN_EXPORT_CSV=Export CSV
+B3EQNG_BTN_SAVE=Save Settings

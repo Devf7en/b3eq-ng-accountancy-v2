@@ -1,0 +1,100 @@
+{
+  "name": "b3Ɛq NG — Daily Compliance Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 8 * * 1-5" }] }
+      },
+      "name": "Cron — Weekdays 08:00 WAT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300],
+      "id": "node-cron-compliance"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ── b3Ɛq Daily Compliance Status ────────────────────────────\n// Checks each tax obligation against today's date\n// Returns RED / AMBER / GREEN for each\n\nconst today  = new Date();\nconst year   = today.getFullYear();\nconst month  = today.getMonth() + 1;\nconst day    = today.getDate();\n\nconst fmt = d => d.toISOString().split('T')[0];\nconst pad = n => String(n).padStart(2,'0');\n\n// Last day of current month\nconst lastDay = new Date(year, month, 0).getDate();\n\n// Next month for period filings\nconst nextMonth = month === 12 ? 1 : month + 1;\nconst nextYear  = month === 12 ? year + 1 : year;\n\n// Days until a deadline\nconst daysUntil = dateStr => {\n  const d = new Date(dateStr);\n  return Math.floor((d - today) / 86400000);\n};\n\n// Status logic\nconst getStatus = days => {\n  if (days < 0)  return 'RED';\n  if (days <= 3) return 'RED';\n  if (days <= 7) return 'AMBER';\n  return 'GREEN';\n};\n\nconst emoji = s => s === 'RED' ? '🔴' : s === 'AMBER' ? '🟡' : '🟢';\n\n// Current month obligations (some already passed this month, show next)\nconst obligations = [\n  {\n    id: 'PAYE',\n    label: 'PAYE Remittance',\n    deadline: `${year}-${pad(month)}-10`,\n    action: 'Remit to State IRS / FIRS',\n    ref: 'NTA 2025 §152'\n  },\n  {\n    id: 'VAT',\n    label: 'VAT Return & Remittance',\n    deadline: `${year}-${pad(month)}-21`,\n    action: 'File VAT return on TaxPro Max',\n    ref: 'VATA / NTA 2025'\n  },\n  {\n    id: 'WHT',\n    label: 'WHT Schedule & Remittance',\n    deadline: `${year}-${pad(month)}-21`,\n    action: 'File Form A + remit to NRS',\n    ref: 'WHT Regs 2024'\n  },\n  {\n    id: 'PENSION',\n    label: 'Pension Contributions',\n    deadline: `${year}-${pad(month)}-07`,\n    action: 'Remit to PFAs (7 days after salary)',\n    ref: 'PRA 2014'\n  },\n  {\n    id: 'NSITF',\n    label: 'NSITF Levy (1%)',\n    deadline: `${year}-${pad(month)}-${pad(lastDay)}`,\n    action: 'Remit 1% gross payroll to NSITF',\n    ref: 'ECA 2010'\n  },\n  {\n    id: 'NHF',\n    label: 'NHF Remittance (2.5%)',\n    deadline: `${year}-${pad(month)}-07`,\n    action: 'Remit to FMBN',\n    ref: 'NHF Act'\n  },\n];\n\nconst results = obligations.map(ob => {\n  const days   = daysUntil(ob.deadline);\n  const status = getStatus(days);\n  const daysLabel = days < 0\n    ? `${Math.abs(days)} day(s) OVERDUE`\n    : days === 0 ? 'DUE TODAY'\n    : `${days} day(s) remaining`;\n  return { ...ob, days, status, daysLabel };\n});\n\nconst redCount   = results.filter(r => r.status === 'RED').length;\nconst amberCount = results.filter(r => r.status === 'AMBER').length;\nconst greenCount = results.filter(r => r.status === 'GREEN').length;\n\nconst overall = redCount > 0 ? 'RED' : amberCount > 0 ? 'AMBER' : 'GREEN';\n\nconst lines = [\n  `${emoji(overall)} *b3Ɛq Compliance Dashboard — ${today.toLocaleDateString('en-NG', {weekday:'long', day:'numeric', month:'long', year:'numeric'})}*`,\n  '',\n  ...results.map(r =>\n    `${emoji(r.status)} *${r.label}*\\n   Deadline: ${r.deadline} (${r.daysLabel})\\n   → ${r.action}`\n  ),\n  '',\n  `📊 Summary: 🔴 ${redCount} critical  🟡 ${amberCount} upcoming  🟢 ${greenCount} clear`,\n  '',\n  redCount > 0 ? '⚠️ Immediate action required — penalties are accruing.' : '',\n];\n\nreturn [{ json: {\n  date:         today.toISOString().split('T')[0],\n  overall,\n  red_count:    redCount,\n  amber_count:  amberCount,\n  green_count:  greenCount,\n  obligations:  results,\n  summary_text: lines.filter(l => l !== '').join('\\n')\n} }];"
+      },
+      "name": "Calculate Compliance Status",
+      "type": "n8n-nodes-base.code",
+      "position": [460, 300],
+      "id": "node-compliance-calc"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{
+            "leftValue":  "={{ $json.overall }}",
+            "rightValue": "GREEN",
+            "operator": { "type": "string", "operation": "notEquals" }
+          }]
+        }
+      },
+      "name": "Has Alerts?",
+      "type": "n8n-nodes-base.if",
+      "position": [700, 300],
+      "id": "node-has-alerts"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "text", "value": "={{ $('Calculate Compliance Status').item.json.summary_text }}" }]
+        }
+      },
+      "name": "Notify — Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [920, 200],
+      "id": "node-notify-alert"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{
+            "leftValue":  "={{ new Date().getDay() }}",
+            "rightValue": 1,
+            "operator": { "type": "number", "operation": "equals" }
+          }]
+        }
+      },
+      "name": "Monday Only (weekly digest)?",
+      "type": "n8n-nodes-base.if",
+      "position": [920, 400],
+      "id": "node-monday"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "text", "value": "={{ $('Calculate Compliance Status').item.json.summary_text }}" }]
+        }
+      },
+      "name": "Notify — Weekly Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1140, 360],
+      "id": "node-weekly"
+    }
+  ],
+  "connections": {
+    "Cron — Weekdays 08:00 WAT":     { "main": [[{ "node": "Calculate Compliance Status", "type": "main", "index": 0 }]] },
+    "Calculate Compliance Status":   { "main": [[{ "node": "Has Alerts?",                  "type": "main", "index": 0 }]] },
+    "Has Alerts?": {
+      "main": [
+        [{ "node": "Notify — Alert",             "type": "main", "index": 0 }],
+        [{ "node": "Monday Only (weekly digest)?","type": "main", "index": 0 }]
+      ]
+    },
+    "Monday Only (weekly digest)?": {
+      "main": [
+        [{ "node": "Notify — Weekly Digest", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["b3Ɛq Nigerian Accountancy", "Compliance", "Daily", "NTA 2025"]
+}

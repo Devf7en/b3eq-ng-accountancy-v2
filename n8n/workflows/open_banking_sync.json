@@ -1,0 +1,101 @@
+{
+  "name": "b3Ɛq NG — Open Banking Sync (Nightly Bank Feed)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 2 * * *" }] }
+      },
+      "name": "Cron — Nightly 02:00 WAT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300], "id": "node-cron-banking"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ── Config ─────────────────────────────────────────────────\n// Set MONO_SECRET_KEY in n8n environment variables\n// Set B3EQ_ACCOUNT_IDS as comma-separated Mono account IDs\n// e.g. B3EQ_ACCOUNT_IDS=63b1a2c3d4e5f6a7b8c9d0e1,63b2a3c4d5e6f7a8b9c0d1e2\n\nconst secretKey  = $env.MONO_SECRET_KEY;\nconst accountIds = ($env.B3EQ_ACCOUNT_IDS || '').split(',').map(s => s.trim()).filter(Boolean);\nconst yesterday  = new Date();\nyesterday.setDate(yesterday.getDate() - 1);\nconst dateFrom   = yesterday.toISOString().split('T')[0];\nconst dateTo     = new Date().toISOString().split('T')[0];\n\nif (!secretKey)    throw new Error('MONO_SECRET_KEY not set in n8n environment');\nif (!accountIds.length) throw new Error('B3EQ_ACCOUNT_IDS not set — comma-separated Mono account IDs');\n\nreturn accountIds.map(id => ({ json: { account_id: id, date_from: dateFrom, date_to: dateTo, secret_key: secretKey } }));"
+      },
+      "name": "Load Account Config",
+      "type": "n8n-nodes-base.code",
+      "position": [460, 300], "id": "node-config"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.withmono.com/v2/accounts/{{ $json.account_id }}/transactions?start={{ $json.date_from }}&end={{ $json.date_to }}&paginate=true",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "mono-sec-key", "value": "={{ $json.secret_key }}" }]
+        },
+        "options": { "timeout": 15000 }
+      },
+      "name": "Fetch Transactions (Mono)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [680, 300], "id": "node-fetch-txns"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ── Parse & normalise bank transactions ─────────────────────\n// Maps Mono transaction format to b3Ɛq ledger staging format\n\nconst items = $input.all();\nconst results = [];\nlet total_debit = 0;\nlet total_credit = 0;\n\nfor (const item of items) {\n  const data = item.json;\n  const txns = data.data || data.transactions || [];\n  const account_id = item.json.meta?.account_id || 'unknown';\n\n  for (const txn of txns) {\n    const amount    = Math.abs(parseFloat(txn.amount || 0)) / 100; // Mono returns kobo\n    const is_debit  = txn.type === 'debit'  || (txn.amount && txn.amount < 0);\n    const is_credit = txn.type === 'credit' || (txn.amount && txn.amount > 0);\n\n    // Auto-suggest ledger account based on narration\n    const narration = (txn.narration || txn.description || '').toLowerCase();\n    let suggested_account = '1002'; // Default: bank account\n    let suggested_journal = 'JV-BK';\n\n    if (narration.includes('salary') || narration.includes('payroll'))  { suggested_account = '6000'; suggested_journal = 'JV-PY'; }\n    else if (narration.includes('rent') || narration.includes('lease')) { suggested_account = '6010'; suggested_journal = 'JV-BK'; }\n    else if (narration.includes('vat') || narration.includes('firs'))   { suggested_account = '2100'; suggested_journal = 'JV-TX'; }\n    else if (narration.includes('paye') || narration.includes('tax'))   { suggested_account = '2120'; suggested_journal = 'JV-TX'; }\n    else if (narration.includes('transfer in') || narration.includes('trf cr')) { suggested_account = '1002'; }\n    else if (narration.includes('fuel') || narration.includes('petrol')) { suggested_account = '6014'; }\n    else if (narration.includes('internet') || narration.includes('mtn') || narration.includes('airtel')) { suggested_account = '6012'; }\n\n    if (is_debit)  total_debit  += amount;\n    if (is_credit) total_credit += amount;\n\n    results.push({ json: {\n      source:            'mono',\n      account_id,\n      txn_id:            txn.id || txn._id,\n      date:              txn.date?.split('T')[0] || new Date().toISOString().split('T')[0],\n      narration:         txn.narration || txn.description || '',\n      amount,\n      type:              is_debit ? 'DEBIT' : 'CREDIT',\n      balance:           parseFloat(txn.balance || 0) / 100,\n      suggested_account,\n      suggested_journal,\n      status:            'STAGED',\n      requires_review:   suggested_account === '1002' && amount > 100000\n    }});\n  }\n}\n\nif (results.length === 0) {\n  return [{ json: { message: 'No transactions found for period', total_debit: 0, total_credit: 0 } }];\n}\n\nconsole.log(`Parsed ${results.length} transactions. Debits: ₦${total_debit.toLocaleString()} | Credits: ₦${total_credit.toLocaleString()}`);\nreturn results;"
+      },
+      "name": "Parse & Categorise Transactions",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 300], "id": "node-parse-txns"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.DOLI_URL }}/api/index.php/bankaccounts/{{ $env.B3EQ_DOLI_BANK_ACCOUNT_ID }}/lines",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "DOLAPIKEY", "value": "={{ $env.DOLI_API_KEY }}" }] },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "date",       "value": "={{ $json.date }}" },
+            { "name": "type",       "value": "={{ $json.type === 'CREDIT' ? 'virement' : 'payment' }}" },
+            { "name": "label",      "value": "={{ '[MONO] ' + $json.narration }}" },
+            { "name": "amount",     "value": "={{ $json.type === 'CREDIT' ? $json.amount : -$json.amount }}" },
+            { "name": "num_chq",    "value": "={{ $json.txn_id }}" }
+          ]
+        },
+        "options": { "ignoreResponseCode": true }
+      },
+      "name": "Post to Dolibarr Bank Register",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 200], "id": "node-post-doli"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst review_items = items.filter(i => i.json.requires_review);\nconst normal_items = items.filter(i => !i.json.requires_review);\nconst total = items.length;\nconst review_count = review_items.length;\n\nconst review_lines = review_items.slice(0, 5).map(i =>\n  `  • ${i.json.date} | ${i.json.type} | ₦${i.json.amount.toLocaleString()} | ${i.json.narration.slice(0,40)}`\n);\n\nconst lines = [\n  `🏦 *b3Ɛq Bank Feed Sync — ${new Date().toLocaleDateString('en-NG')}*`,\n  ``,\n  `✓ ${total} transactions imported from Mono`,\n  `  Categorised: ${total - review_count}`,\n  `  Needs review: ${review_count}`,\n  ``,\n  total > 0 ? `→ Review in Dolibarr: Financial → Bank/Cash Accounts` : '',\n  review_count > 0 ? `\\n⚠ High-value unmatched transactions:` : '',\n  ...review_lines,\n  review_count > 5 ? `  ... and ${review_count - 5} more` : ''\n].filter(l => l !== undefined);\n\nreturn [{ json: { summary: lines.join('\\n'), total, review_count } }];"
+      },
+      "name": "Build Sync Summary",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 400], "id": "node-summary-banking"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}", "method": "POST", "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "text", "value": "={{ $('Build Sync Summary').all()[0].json.summary }}" }] }
+      },
+      "name": "Notify Bank Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1340, 400], "id": "node-notify-banking"
+    }
+  ],
+  "connections": {
+    "Cron — Nightly 02:00 WAT":           { "main": [[{ "node": "Load Account Config",                "type": "main", "index": 0 }]] },
+    "Load Account Config":                 { "main": [[{ "node": "Fetch Transactions (Mono)",          "type": "main", "index": 0 }]] },
+    "Fetch Transactions (Mono)":           { "main": [[{ "node": "Parse & Categorise Transactions",    "type": "main", "index": 0 }]] },
+    "Parse & Categorise Transactions": {
+      "main": [[
+        { "node": "Post to Dolibarr Bank Register", "type": "main", "index": 0 },
+        { "node": "Build Sync Summary",             "type": "main", "index": 0 }
+      ]]
+    },
+    "Build Sync Summary": { "main": [[{ "node": "Notify Bank Sync", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["b3Ɛq Nigerian Accountancy", "Banking", "Mono", "Open Finance", "Automation"],
+  "notes": "Required env vars: MONO_SECRET_KEY, B3EQ_ACCOUNT_IDS (comma-separated), DOLI_URL, DOLI_API_KEY, B3EQ_DOLI_BANK_ACCOUNT_ID, SLACK_WEBHOOK_URL"
+}

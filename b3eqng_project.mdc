@@ -1,0 +1,59 @@
+---
+title: b3Ɛq Nigerian Accountancy Project Context
+version: 1.0.1
+last_updated: 2024-07-13
+---
+
+# Project: b3Ɛq Nigerian Accountancy (b3eqng)
+
+## Technical Environment
+- **Platform:** Dolibarr ERP/CRM v22.0.1
+- **PHP:** 7.4+ (Compatible with 8.1/8.2)
+- **Architecture:** Native Dolibarr Module sitting in `htdocs/custom/b3eqng/`
+
+## Critical Lessons & Rules for Dolibarr 22.0.1
+
+### 1. Module Descriptor Location
+The descriptor `modB3eqng.class.php` MUST reside in:
+`custom/b3eqng/core/modules/modB3eqng.class.php`
+**Rule:** Never place a duplicate of this file in the module root. It causes a "Cannot redeclare class" Fatal Error which hides the module from the UI.
+
+### 2. The Toggle Switch Logic (init function)
+To ensure the module activation toggle stays "ON":
+- The `init()` function in the descriptor must return `1` (Integer).
+- Pathing: `$this->module_sql_dir` must be set as `b3eqng/sql` (no leading slash) inside both the constructor and the `init()` method.
+- Clear `$this->error` before returning 1 in `init()` to prevent Dolibarr from thinking a warning is a fatal activation failure.
+
+### 3. SQL Seeding (install_data.php)
+- Use `dol_buildpath('/b3eqng/sql/llx_b3eqng_seed.sql', 0)` to get absolute paths.
+- **Regex Split:** Use `/;(?=\s*\n|$)/` to split SQL statements. This prevents breaking inside strings or comments.
+- **Duplicate Errors:** Ignore SQL error 1062 (Duplicate entry) during seeding to allow idempotent activations.
+
+### 4. UI & Icons
+- Picto Format: Use `naira@b3eqng`.
+- File Location: Place `naira.svg` and `naira.png` in `custom/b3eqng/img/`.
+- Styling: Ensure icons are monochrome to inherit the Dolibarr theme colors via CSS filters.
+
+### 5. Multi-Version Conflict
+- Dolibarr cannot run two versions of a module with the same class name (`modB3eqng`) simultaneously.
+- To test Version 2, the Version 1 module MUST be physically removed or the class name/ID must be uniquely changed.
+
+## Tax Law Baseline (NTA 2025)
+- VAT: 7.5%
+- CIT: 0% / 20% / 30% based on company size.
+- Development Levy: 4% (Assessable Profits).
+- WHT: WHT Regulations 2024 (10%, 5%, 2.5% bands).
+
+## Module Quality Improvements
+- Added `composer.json` for classmap autoloading of module classes and libraries.
+- Added `.editorconfig` to enforce consistent formatting.
+- Added `modulebuilder.txt` to capture module metadata.
+- Added `lib/SeedInstaller.php` for robust seed execution.
+- Added `test/test_runner.php` and `test/run-tests.sh` for lightweight module validation.
+
+## Recent Fix Summary
+- Fixed `setup.php` form input handling for `company_size`, `reg_state`, `fiscal_year_start`, `fiscal_year_end`, `tin`, and `vat_number`.
+- Corrected module activation path handling in `modB3eqng.class.php` by using `_load_tables()` and module SQL directory settings.
+- Improved seed installer in `scripts/install_data.php` to count SQL errors correctly and maintain idempotent behavior.
+- Hardened page input sanitization in `assets.php`, `audit_trail.php`, `fx_revaluation.php`, `cit_estimator.php`, `payroll.php`, `vat_return.php`, and `wht_calc.php`.
+- Note: PHP CLI was not available in this workspace shell, so runtime validation must be completed on a host with PHP installed.

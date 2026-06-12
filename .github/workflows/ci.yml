@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v4
+        with:
+          php-version: '8.2'
+          extensions: mysqli, intl, zip, gd
+      - name: Run module core checks
+        run: |
+          cd dolibarr/htdocs/custom/b3eqng
+          php test/test_runner.php

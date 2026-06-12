@@ -1,0 +1,14 @@
+{
+  "_meta": { "name": "b3Ɛq NG Journals", "version": "1.0.0", "tag": "b3Ɛq Nigerian Accountancy" },
+  "journals": [
+    { "code": "JV-SA", "name": "Sales Journal",           "type": "SELL",  "description": "Customer invoices, credit notes, revenue recognition" },
+    { "code": "JV-PU", "name": "Purchase Journal",        "type": "BUY",   "description": "Supplier invoices, purchase orders, debit notes" },
+    { "code": "JV-BK", "name": "Bank Journal",            "type": "BANK",  "description": "CBN / commercial bank receipts and payments" },
+    { "code": "JV-CS", "name": "Cash Journal",            "type": "CASH",  "description": "Petty cash disbursements and receipts" },
+    { "code": "JV-TX", "name": "Tax Journal",             "type": "VARIOUS","description": "VAT, WHT, PAYE, CIT declarations and remittances" },
+    { "code": "JV-PY", "name": "Payroll Journal",         "type": "VARIOUS","description": "Monthly payroll runs, PAYE deductions, statutory levies" },
+    { "code": "JV-FA", "name": "Fixed Assets Journal",   "type": "VARIOUS","description": "PPE acquisitions, disposals, depreciation schedules" },
+    { "code": "JV-MV", "name": "General Journal",         "type": "VARIOUS","description": "Adjustments, provisions, re-classifications, year-end" },
+    { "code": "JV-FX", "name": "Forex Journal",           "type": "VARIOUS","description": "FX gain/loss, domiciliary account movements, CBN rate revaluations" }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "b3eq-ng-accountancy-v2",
+  "dockerComposeFile": ["../docker-compose.yml"],
+  "service": "dolibarr",
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  "remoteUser": "www-data",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "bmewburn.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bmewburn.vscode-intelephense-client"
+      ]
+    }
+  },
+  "postCreateCommand": "composer --version || true",
+  "shutdownAction": "stopCompose"
+}

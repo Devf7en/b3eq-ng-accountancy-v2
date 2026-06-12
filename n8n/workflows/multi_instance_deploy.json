@@ -1,0 +1,109 @@
+{
+  "name": "b3Ɛq NG — Multi-Instance Deployer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "b3eq-ng-deploy",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Webhook — Deploy Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "id": "node-webhook",
+      "notes": "POST { target_url, api_key, entity_id?, dry_run? }"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const body = $input.all()[0].json.body || $input.all()[0].json;\nconst targetUrl = (body.target_url || '').replace(/\\/+$/, '');\nconst apiKey    = body.api_key || '';\nconst entityId  = body.entity_id || 1;\nconst dryRun    = body.dry_run === true || body.dry_run === 'true';\n\nif (!targetUrl) throw new Error('target_url is required');\nif (!apiKey)    throw new Error('api_key is required');\n\nreturn [{ json: { targetUrl, apiKey, entityId, dryRun, startedAt: new Date().toISOString() } }];"
+      },
+      "name": "Parse & Validate Input",
+      "type": "n8n-nodes-base.code",
+      "position": [460, 300],
+      "id": "node-parse"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.targetUrl }}/api/index.php/status",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "DOLAPIKEY", "value": "={{ $json.apiKey }}" }]
+        },
+        "options": { "timeout": 10000 }
+      },
+      "name": "Test API Connection",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [680, 300],
+      "id": "node-test-conn"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ── Seed COA via API ─────────────────────────────────────────\n// Full 90-account Nigerian COA for Dolibarr\n\nconst { targetUrl, apiKey, entityId, dryRun } = $('Parse & Validate Input').all()[0].json;\n\nconst ACCOUNTS = [\n  ['1000','Cash and Cash Equivalents','ASSET','CURRENT_ASSET'],\n  ['1001','Petty Cash Naira','ASSET','CURRENT_ASSET'],\n  ['1002','Current Account CBN Commercial Banks','ASSET','CURRENT_ASSET'],\n  ['1003','Domiciliary Account','ASSET','CURRENT_ASSET'],\n  ['1100','Accounts Receivable','ASSET','CURRENT_ASSET'],\n  ['1101','VAT Recoverable Input VAT','ASSET','CURRENT_ASSET'],\n  ['1102','WHT Credit Receivable','ASSET','CURRENT_ASSET'],\n  ['1103','Staff Advances Prepayments','ASSET','CURRENT_ASSET'],\n  ['1104','Prepaid Expenses','ASSET','CURRENT_ASSET'],\n  ['1105','Accrued Income','ASSET','CURRENT_ASSET'],\n  ['1200','Inventory Finished Goods','ASSET','CURRENT_ASSET'],\n  ['1201','Inventory Raw Materials','ASSET','CURRENT_ASSET'],\n  ['1202','Inventory Work-in-Progress','ASSET','CURRENT_ASSET'],\n  ['1300','Property Plant Equipment','ASSET','NON_CURRENT_ASSET'],\n  ['1301','Accumulated Depreciation PPE','ASSET','NON_CURRENT_ASSET'],\n  ['1302','Intangible Assets','ASSET','NON_CURRENT_ASSET'],\n  ['1303','Accumulated Amortisation','ASSET','NON_CURRENT_ASSET'],\n  ['1304','Right-of-Use Assets IFRS 16','ASSET','NON_CURRENT_ASSET'],\n  ['1400','Deferred Tax Asset','ASSET','NON_CURRENT_ASSET'],\n  ['2000','Accounts Payable','LIABILITY','CURRENT_LIABILITY'],\n  ['2001','Accrued Expenses','LIABILITY','CURRENT_LIABILITY'],\n  ['2100','VAT Payable Output 7.5%','LIABILITY','CURRENT_LIABILITY'],\n  ['2101','VAT Payable Zero-Rated','LIABILITY','CURRENT_LIABILITY'],\n  ['2102','VAT Control Account','LIABILITY','CURRENT_LIABILITY'],\n  ['2110','WHT Payable Dividends 10%','LIABILITY','CURRENT_LIABILITY'],\n  ['2111','WHT Payable Interest 10%','LIABILITY','CURRENT_LIABILITY'],\n  ['2112','WHT Payable Rent 10%','LIABILITY','CURRENT_LIABILITY'],\n  ['2113','WHT Payable Contracts Supplies 5%','LIABILITY','CURRENT_LIABILITY'],\n  ['2114','WHT Payable Professional Fees 10%','LIABILITY','CURRENT_LIABILITY'],\n  ['2115','WHT Payable Director Fees 10%','LIABILITY','CURRENT_LIABILITY'],\n  ['2116','WHT Payable Technical Fees 10%','LIABILITY','CURRENT_LIABILITY'],\n  ['2117','WHT Payable Commissions 10%','LIABILITY','CURRENT_LIABILITY'],\n  ['2118','WHT Payable Royalties 10%','LIABILITY','CURRENT_LIABILITY'],\n  ['2119','WHT Payable Construction 2.5%','LIABILITY','CURRENT_LIABILITY'],\n  ['2120','PAYE Tax Payable','LIABILITY','CURRENT_LIABILITY'],\n  ['2121','Pension Payable Employer 10%','LIABILITY','CURRENT_LIABILITY'],\n  ['2122','Pension Payable Employee 8%','LIABILITY','CURRENT_LIABILITY'],\n  ['2123','NHF Payable 2.5%','LIABILITY','CURRENT_LIABILITY'],\n  ['2124','NSITF Levy Payable 1%','LIABILITY','CURRENT_LIABILITY'],\n  ['2125','ITF Levy Payable 1%','LIABILITY','CURRENT_LIABILITY'],\n  ['2126','NITDA Levy Payable 1%','LIABILITY','CURRENT_LIABILITY'],\n  ['2130','CIT Payable Current Year','LIABILITY','CURRENT_LIABILITY'],\n  ['2131','Development Levy Payable 4%','LIABILITY','CURRENT_LIABILITY'],\n  ['2132','Capital Gains Tax Payable','LIABILITY','CURRENT_LIABILITY'],\n  ['2133','Stamp Duty Payable','LIABILITY','CURRENT_LIABILITY'],\n  ['2140','Short-term Loans Borrowings','LIABILITY','CURRENT_LIABILITY'],\n  ['2141','Customer Deposits Advances','LIABILITY','CURRENT_LIABILITY'],\n  ['2200','Long-term Loans Borrowings','LIABILITY','NON_CURRENT_LIABILITY'],\n  ['2201','Lease Liabilities IFRS 16','LIABILITY','NON_CURRENT_LIABILITY'],\n  ['2202','Deferred Tax Liability','LIABILITY','NON_CURRENT_LIABILITY'],\n  ['3000','Share Capital Proprietors Capital','EQUITY','EQUITY'],\n  ['3001','Share Premium','EQUITY','EQUITY'],\n  ['3002','Retained Earnings','EQUITY','EQUITY'],\n  ['3003','General Reserve','EQUITY','EQUITY'],\n  ['3004','Statutory Reserve','EQUITY','EQUITY'],\n  ['3005','Foreign Currency Translation Reserve','EQUITY','EQUITY'],\n  ['4000','Sales Revenue Goods','INCOME','OPERATING_REVENUE'],\n  ['4001','Sales Revenue Services','INCOME','OPERATING_REVENUE'],\n  ['4002','Sales Revenue Digital SaaS','INCOME','OPERATING_REVENUE'],\n  ['4003','Export Sales Revenue Zero-rated','INCOME','OPERATING_REVENUE'],\n  ['4004','Commission Income','INCOME','OPERATING_REVENUE'],\n  ['4005','Franchise Licence Income','INCOME','OPERATING_REVENUE'],\n  ['4100','Interest Income','INCOME','OTHER_INCOME'],\n  ['4101','Rental Income','INCOME','OTHER_INCOME'],\n  ['4102','Dividend Income','INCOME','OTHER_INCOME'],\n  ['4103','Foreign Exchange Gain','INCOME','OTHER_INCOME'],\n  ['4104','Gain on Disposal of Assets','INCOME','OTHER_INCOME'],\n  ['4105','Grant Subsidy Income','INCOME','OTHER_INCOME'],\n  ['5000','Cost of Goods Sold','EXPENSE','COST_OF_SALES'],\n  ['5001','Direct Labour Production Wages','EXPENSE','COST_OF_SALES'],\n  ['5002','Direct Materials Consumables','EXPENSE','COST_OF_SALES'],\n  ['5003','Import Duties Customs Levies','EXPENSE','COST_OF_SALES'],\n  ['5004','Freight Delivery Inbound','EXPENSE','COST_OF_SALES'],\n  ['6000','Staff Salaries Wages','EXPENSE','OPERATING_EXPENSE'],\n  ['6001','PAYE Tax Expense','EXPENSE','OPERATING_EXPENSE'],\n  ['6002','Employer Pension Contribution 10%','EXPENSE','OPERATING_EXPENSE'],\n  ['6003','NSITF Premium 1%','EXPENSE','OPERATING_EXPENSE'],\n  ['6004','ITF Levy 1%','EXPENSE','OPERATING_EXPENSE'],\n  ['6005','Group Life Insurance','EXPENSE','OPERATING_EXPENSE'],\n  ['6010','Rent and Lease','EXPENSE','OPERATING_EXPENSE'],\n  ['6011','Electricity and Power','EXPENSE','OPERATING_EXPENSE'],\n  ['6012','Internet and Telecoms','EXPENSE','OPERATING_EXPENSE'],\n  ['6013','Repairs and Maintenance','EXPENSE','OPERATING_EXPENSE'],\n  ['6014','Fuel and Transportation','EXPENSE','OPERATING_EXPENSE'],\n  ['6020','Professional Fees','EXPENSE','OPERATING_EXPENSE'],\n  ['6021','Consulting Outsourcing Fees','EXPENSE','OPERATING_EXPENSE'],\n  ['6022','Advertising and Marketing','EXPENSE','OPERATING_EXPENSE'],\n  ['6023','Bank Charges Commission','EXPENSE','OPERATING_EXPENSE'],\n  ['6024','Travel Accommodation Domestic','EXPENSE','OPERATING_EXPENSE'],\n  ['6025','Travel Accommodation International','EXPENSE','OPERATING_EXPENSE'],\n  ['6026','Printing Stationery Office Supplies','EXPENSE','OPERATING_EXPENSE'],\n  ['6027','Security Services','EXPENSE','OPERATING_EXPENSE'],\n  ['6028','Cleaning Janitorial Services','EXPENSE','OPERATING_EXPENSE'],\n  ['6029','Insurance Premiums','EXPENSE','OPERATING_EXPENSE'],\n  ['6030','Depreciation PPE','EXPENSE','OPERATING_EXPENSE'],\n  ['6031','Amortisation Intangibles','EXPENSE','OPERATING_EXPENSE'],\n  ['6032','Depreciation Right-of-Use Assets','EXPENSE','OPERATING_EXPENSE'],\n  ['7000','Companies Income Tax Expense','EXPENSE','TAX_EXPENSE'],\n  ['7001','Development Levy 4% Expense','EXPENSE','TAX_EXPENSE'],\n  ['7002','Capital Gains Tax Expense','EXPENSE','TAX_EXPENSE'],\n  ['7003','Deferred Tax Expense','EXPENSE','TAX_EXPENSE'],\n  ['7004','Minimum Tax Expense','EXPENSE','TAX_EXPENSE'],\n  ['8000','Interest Expense Borrowings','EXPENSE','FINANCE_COST'],\n  ['8001','Finance Cost Lease IFRS 16','EXPENSE','FINANCE_COST'],\n  ['8002','Foreign Exchange Loss','EXPENSE','FINANCE_COST'],\n  ['8003','Loss on Disposal of Assets','EXPENSE','FINANCE_COST'],\n];\n\nconst results = { created: 0, skipped: 0, errors: 0, log: [] };\n\nif (!dryRun) {\n  for (const [code, label, type, subtype] of ACCOUNTS) {\n    try {\n      const checkRes = await fetch(`${targetUrl}/api/index.php/accountingaccounts?sqlfilters=(t.account_number:=:'${code}')`, {\n        headers: { 'DOLAPIKEY': apiKey }\n      });\n      const existing = await checkRes.json();\n      if (Array.isArray(existing) && existing.length > 0) {\n        results.skipped++;\n        continue;\n      }\n\n      const postRes = await fetch(`${targetUrl}/api/index.php/accountingaccounts`, {\n        method: 'POST',\n        headers: { 'DOLAPIKEY': apiKey, 'Content-Type': 'application/json' },\n        body: JSON.stringify({\n          account_number: code, label,\n          pcg_type: type, pcg_subtype: subtype,\n          fk_pcg_version: 'NG-IFRS-SME',\n          entity: entityId, active: 1\n        })\n      });\n      const postData = await postRes.json();\n      if (typeof postData === 'number' && postData > 0) {\n        results.created++;\n      } else {\n        results.errors++;\n        results.log.push(`ERROR ${code}: ${JSON.stringify(postData)}`);\n      }\n    } catch(e) {\n      results.errors++;\n      results.log.push(`EXCEPTION ${code}: ${e.message}`);\n    }\n  }\n} else {\n  results.log.push('DRY RUN — no accounts were created');\n  results.skipped = ACCOUNTS.length;\n}\n\nreturn [{ json: { ...($('Parse & Validate Input').all()[0].json), coa_results: results } }];"
+      },
+      "name": "Seed Chart of Accounts",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 300],
+      "id": "node-seed-coa"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const { targetUrl, apiKey, entityId, dryRun } = $('Parse & Validate Input').all()[0].json;\n\nconst JOURNALS = [\n  ['JV-SA','Sales Journal',        2],\n  ['JV-PU','Purchase Journal',     3],\n  ['JV-BK','Bank Journal',         4],\n  ['JV-CS','Cash Journal',         5],\n  ['JV-TX','Tax Journal',          1],\n  ['JV-PY','Payroll Journal',      1],\n  ['JV-FA','Fixed Assets Journal', 1],\n  ['JV-MV','General Journal',      9],\n  ['JV-FX','Forex Journal',        1],\n];\n\nconst results = { created: 0, skipped: 0, errors: 0 };\n\nif (!dryRun) {\n  for (const [code, label, nature] of JOURNALS) {\n    try {\n      const check = await fetch(`${targetUrl}/api/index.php/accountingjournals?sqlfilters=(t.code:=:'${code}')`, {\n        headers: { 'DOLAPIKEY': apiKey }\n      });\n      const existing = await check.json();\n      if (Array.isArray(existing) && existing.length > 0) { results.skipped++; continue; }\n\n      const post = await fetch(`${targetUrl}/api/index.php/accountingjournals`, {\n        method: 'POST',\n        headers: { 'DOLAPIKEY': apiKey, 'Content-Type': 'application/json' },\n        body: JSON.stringify({ code, label, nature, entity: entityId, active: 1 })\n      });\n      const data = await post.json();\n      typeof data === 'number' && data > 0 ? results.created++ : results.errors++;\n    } catch(e) { results.errors++; }\n  }\n} else {\n  results.skipped = JOURNALS.length;\n}\n\nreturn [{ json: { ...($('Parse & Validate Input').all()[0].json), journal_results: results } }];"
+      },
+      "name": "Seed Journals",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 300],
+      "id": "node-seed-journals"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const coaResults     = $('Seed Chart of Accounts').all()[0].json.coa_results;\nconst journalResults = $('Seed Journals').all()[0].json.journal_results;\nconst { targetUrl, dryRun, startedAt } = $('Parse & Validate Input').all()[0].json;\n\nconst completedAt = new Date().toISOString();\nconst durationMs  = new Date(completedAt) - new Date(startedAt);\n\nconst success = coaResults.errors === 0 && journalResults.errors === 0;\n\nconst report = [\n  dryRun ? '🔍 *DRY RUN — b3Ɛq NG Deploy Report*' : (success ? '✅ *b3Ɛq NG Deploy Complete*' : '⚠️ *b3Ɛq NG Deploy Completed with Warnings*'),\n  '',\n  `🌐 Target: ${targetUrl}`,\n  `⏱ Duration: ${(durationMs/1000).toFixed(1)}s`,\n  '',\n  `📊 Chart of Accounts:`,\n  `   Created: ${coaResults.created}  |  Skipped: ${coaResults.skipped}  |  Errors: ${coaResults.errors}`,\n  '',\n  `📒 Journals:`,\n  `   Created: ${journalResults.created}  |  Skipped: ${journalResults.skipped}  |  Errors: ${journalResults.errors}`,\n  '',\n  dryRun ? '→ Re-run with dry_run: false to execute' : '→ Activate module: Home → Setup → Modules → b3eqng',\n  '→ SQL seed still required for VAT + WHT codes',\n];\n\nif (coaResults.log?.length > 0) {\n  report.push('', '⚠ Errors:', ...coaResults.log.slice(0, 5));\n}\n\nreturn [{ json: {\n  success,\n  target: targetUrl,\n  coa:     coaResults,\n  journals: journalResults,\n  duration_ms: durationMs,\n  report_text: report.join('\\n')\n} }];"
+      },
+      "name": "Build Deploy Report",
+      "type": "n8n-nodes-base.code",
+      "position": [1340, 300],
+      "id": "node-report"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "text", "value": "={{ $json.report_text }}" }]
+        }
+      },
+      "name": "Notify Deploy Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1560, 300],
+      "id": "node-notify-deploy"
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($('Build Deploy Report').all()[0].json) }}" },
+      "name": "Return Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1560, 460],
+      "id": "node-respond"
+    }
+  ],
+  "connections": {
+    "Webhook — Deploy Trigger":  { "main": [[{ "node": "Parse & Validate Input",    "type": "main", "index": 0 }]] },
+    "Parse & Validate Input":    { "main": [[{ "node": "Test API Connection",        "type": "main", "index": 0 }]] },
+    "Test API Connection":        { "main": [[{ "node": "Seed Chart of Accounts",    "type": "main", "index": 0 }]] },
+    "Seed Chart of Accounts":    { "main": [[{ "node": "Seed Journals",              "type": "main", "index": 0 }]] },
+    "Seed Journals":             { "main": [[{ "node": "Build Deploy Report",        "type": "main", "index": 0 }]] },
+    "Build Deploy Report": {
+      "main": [[
+        { "node": "Notify Deploy Result", "type": "main", "index": 0 },
+        { "node": "Return Response",      "type": "main", "index": 0 }
+      ]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["b3Ɛq Nigerian Accountancy", "Deploy", "Multi-Instance"]
+}

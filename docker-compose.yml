@@ -1,0 +1,63 @@
+version: '3.9'
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: dolibarr
+      MYSQL_USER: dolibarr
+      MYSQL_PASSWORD: dolibarr
+    volumes:
+      - db_data:/var/lib/mysql
+
+  dolibarr:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    depends_on:
+      - db
+    ports:
+      - '8080:80'
+    environment:
+      DOLI_DB_HOST: db
+      DOLI_DB_PORT: 3306
+      DOLI_DB_NAME: dolibarr
+      DOLI_DB_USER: dolibarr
+      DOLI_DB_PASSWORD: dolibarr
+      DOLI_USE_HTTPS: '0'
+    volumes:
+      - ./dolibarr/htdocs/custom/b3eqng:/var/www/html/custom/b3eqng:ro
+      - dolibarr_data:/var/www/html/documents
+      - ./:/workspace:cached
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - '8081:80'
+
+  n8n:
+    image: n8nio/n8n
+    restart: unless-stopped
+    ports:
+      - '5678:5678'
+    environment:
+      DB_TYPE: sqlite
+      N8N_BASIC_AUTH_ACTIVE: 'true'
+      N8N_BASIC_AUTH_USER: admin
+      N8N_BASIC_AUTH_PASSWORD: password
+      N8N_HOST: 0.0.0.0
+      N8N_PORT: 5678
+    volumes:
+      - ./n8n/workflows:/home/node/.n8n/workflows
+
+volumes:
+  db_data:
+  dolibarr_data:

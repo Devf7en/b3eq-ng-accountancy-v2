@@ -1,0 +1,22 @@
+{
+    "name": "b3eqng/b3eqng",
+    "description": "b3Ɛq Nigerian Accountancy module for Dolibarr",
+    "type": "dolibarr-module",
+    "license": "GPL-3.0-or-later",
+    "homepage": "https://f7en.net",
+    "require": {
+        "php": ">=7.4"
+    },
+    "autoload": {
+        "classmap": [
+            "class/",
+            "core/modules/",
+            "lib/"
+        ]
+    },
+    "autoload-dev": {
+        "classmap": [
+            "test/"
+        ]
+    }
+}

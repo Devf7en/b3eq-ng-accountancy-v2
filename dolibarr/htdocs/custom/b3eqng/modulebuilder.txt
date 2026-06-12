@@ -1,0 +1,11 @@
+Name: b3eqng
+Version: 2.0.0
+Description: b3Ɛq Nigerian Accountancy for Dolibarr
+Author: Foundations Aesthetics Resource / DCRI-PPS SmartAPPS (f7en)
+Author Email: support@f7en.net
+Website: https://f7en.net
+License: GPL-3.0-or-later
+Dolibarr Minimum Version: 15.0
+PHP Minimum Version: 7.4
+Module Type: financial
+Directory: custom/b3eqng

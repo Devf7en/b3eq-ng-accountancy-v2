@@ -1,0 +1,88 @@
+{
+  "name": "b3Ɛq NG — WHT Monthly Schedule",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 9 20 * *" }]
+        }
+      },
+      "name": "Cron — 20th of Month 09:00 WAT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300],
+      "id": "node-cron-wht"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.DOLI_URL }}/api/index.php/supplierinvoices",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "DOLAPIKEY", "value": "={{ $env.DOLI_API_KEY }}" }]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "datestart", "value": "={{ $now.minus({months:1}).startOf('month').toFormat('yyyy-MM-dd') }}" },
+            { "name": "dateend",   "value": "={{ $now.minus({months:1}).endOf('month').toFormat('yyyy-MM-dd') }}" },
+            { "name": "status",    "value": "1" },
+            { "name": "limit",     "value": "500" }
+          ]
+        }
+      },
+      "name": "Fetch Supplier Invoices",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [460, 300],
+      "id": "node-fetch-suppliers"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ── b3Ɛq WHT Schedule Generator ─────────────────────────────\n// NTA 2025 · WHT Regulations 2024\n// Groups supplier payments by WHT code and generates Form A schedule\n\nconst WHT_RATES = {\n  'NG-WHT-DIV': { rate: 0.10, label: 'Dividends' },\n  'NG-WHT-INT': { rate: 0.10, label: 'Interest' },\n  'NG-WHT-RNT': { rate: 0.10, label: 'Rent' },\n  'NG-WHT-ROY': { rate: 0.10, label: 'Royalties' },\n  'NG-WHT-DIR': { rate: 0.10, label: 'Director Fees' },\n  'NG-WHT-PRF': { rate: 0.10, label: 'Professional Fees' },\n  'NG-WHT-TEC': { rate: 0.10, label: 'Technical/Management/Consulting' },\n  'NG-WHT-COM': { rate: 0.10, label: 'Commissions' },\n  'NG-WHT-SUP': { rate: 0.05, label: 'Contracts & Supply' },\n  'NG-WHT-CON': { rate: 0.025, label: 'Construction/Drilling/Survey' },\n};\n\nconst invoices = $input.all()[0]?.json || [];\nconst period = new Date();\nperiod.setMonth(period.getMonth() - 1);\nconst periodLabel = period.toLocaleString('en-NG', { month: 'long', year: 'numeric' });\n\nconst fmt = n => '₦' + parseFloat(n).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\n\n// Group by WHT type (using supplier category as proxy)\n// In production: use invoice extrafields or supplier WHT code tag\nconst schedule = {};\nlet totalGross = 0;\nlet totalWHT = 0;\n\nif (Array.isArray(invoices)) {\n  for (const inv of invoices) {\n    // Default: use contracts/supply rate for non-categorised suppliers\n    const whtCode = inv.array_options?.options_wht_code || 'NG-WHT-SUP';\n    const whtInfo = WHT_RATES[whtCode] || WHT_RATES['NG-WHT-SUP'];\n    const gross   = parseFloat(inv.total_ttc || inv.total_ht || 0);\n    const wht     = parseFloat((gross * whtInfo.rate).toFixed(2));\n    const net     = parseFloat((gross - wht).toFixed(2));\n\n    if (!schedule[whtCode]) {\n      schedule[whtCode] = {\n        code: whtCode, label: whtInfo.label,\n        rate: whtInfo.rate, vendors: [],\n        total_gross: 0, total_wht: 0, total_net: 0\n      };\n    }\n\n    schedule[whtCode].vendors.push({\n      vendor_name: inv.socid_name || inv.name || 'Unknown',\n      invoice_ref: inv.ref,\n      invoice_date: inv.date,\n      gross, wht, net,\n      tin: inv.array_options?.options_vendor_tin || 'NOT PROVIDED'\n    });\n\n    schedule[whtCode].total_gross += gross;\n    schedule[whtCode].total_wht   += wht;\n    schedule[whtCode].total_net   += net;\n    totalGross += gross;\n    totalWHT   += wht;\n  }\n}\n\nconst scheduleArr = Object.values(schedule);\n\n// Build summary text\nconst lines = [\n  `📋 *b3Ɛq WHT Schedule — ${periodLabel}*`,\n  ``,\n  `Total Supplier Payments: ${fmt(totalGross)}`,\n  `Total WHT Deducted:      ${fmt(totalWHT)}`,\n  `Net Paid to Vendors:     ${fmt(totalGross - totalWHT)}`,\n  ``,\n  `--- By Transaction Type ---`,\n];\n\nfor (const s of scheduleArr) {\n  lines.push(`• ${s.label} (${(s.rate*100).toFixed(1)}%): ${fmt(s.total_wht)} WHT on ${fmt(s.total_gross)} gross`);\n}\n\nlines.push('');\nlines.push('⏰ Remit by 21st — file Form A schedule on TaxPro Max');\nlines.push('📎 WHT Regulations 2024 · NTA 2025');\n\nreturn [{\n  json: {\n    period:        periodLabel,\n    total_gross:   totalGross,\n    total_wht:     totalWHT,\n    total_net:     totalGross - totalWHT,\n    schedule:      scheduleArr,\n    invoice_count: Array.isArray(invoices) ? invoices.length : 0,\n    summary_text:  lines.join('\\n'),\n    csv_rows: scheduleArr.flatMap(s => s.vendors.map(v => ({\n      period:          periodLabel,\n      wht_type:        s.label,\n      wht_code:        s.code,\n      wht_rate:        (s.rate * 100).toFixed(1) + '%',\n      vendor_name:     v.vendor_name,\n      vendor_tin:      v.tin,\n      invoice_ref:     v.invoice_ref,\n      invoice_date:    v.invoice_date,\n      gross_amount:    v.gross.toFixed(2),\n      wht_deducted:    v.wht.toFixed(2),\n      net_paid:        v.net.toFixed(2),\n    })))\n  }\n}];"
+      },
+      "name": "Build WHT Schedule",
+      "type": "n8n-nodes-base.code",
+      "position": [700, 300],
+      "id": "node-build-wht"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Convert schedule to CSV (Form A format)\nconst rows = $input.all()[0].json.csv_rows || [];\nif (rows.length === 0) return [{ json: { csv: '', empty: true } }];\n\nconst headers = Object.keys(rows[0]);\nconst csvLines = [\n  headers.join(','),\n  ...rows.map(row => headers.map(h => `\"${String(row[h] || '').replace(/\"/g, '\"\"')}\"`).join(','))\n];\n\nreturn [{ json: { csv: csvLines.join('\\n'), row_count: rows.length } }];"
+      },
+      "name": "Generate CSV",
+      "type": "n8n-nodes-base.code",
+      "position": [920, 200],
+      "id": "node-csv"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "text",
+            "value": "={{ $('Build WHT Schedule').item.json.summary_text }}"
+          }]
+        }
+      },
+      "name": "Notify WHT Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [920, 400],
+      "id": "node-notify-wht"
+    }
+  ],
+  "connections": {
+    "Cron — 20th of Month 09:00 WAT": { "main": [[{ "node": "Fetch Supplier Invoices", "type": "main", "index": 0 }]] },
+    "Fetch Supplier Invoices":         { "main": [[{ "node": "Build WHT Schedule",      "type": "main", "index": 0 }]] },
+    "Build WHT Schedule": {
+      "main": [[
+        { "node": "Generate CSV",       "type": "main", "index": 0 },
+        { "node": "Notify WHT Summary", "type": "main", "index": 0 }
+      ]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["b3Ɛq Nigerian Accountancy", "WHT", "NTA 2025", "Compliance"]
+}

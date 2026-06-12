@@ -1,0 +1,131 @@
+{
+  "_meta": {
+    "name": "b3Ɛq Asset Depreciation Rules",
+    "standard": "IFRS for SMEs Section 17 (PPE) + IAS 16",
+    "version": "2.0.0",
+    "tag": "b3Ɛq Nigerian Accountancy",
+    "notes": "FIRS accepts IFRS-aligned depreciation methods. Useful lives are indicative — adjust per asset condition and management assessment."
+  },
+  "categories": [
+    {
+      "id": "IT_EQUIPMENT",
+      "label": "IT Equipment & Computers",
+      "method": "STRAIGHT_LINE",
+      "useful_life_years": 3,
+      "residual_pct": 0,
+      "account_asset": "1300",
+      "account_accum_depr": "1301",
+      "account_depr_expense": "6030",
+      "notes": "Laptops, desktops, servers, networking equipment"
+    },
+    {
+      "id": "FURNITURE",
+      "label": "Furniture & Fittings",
+      "method": "STRAIGHT_LINE",
+      "useful_life_years": 5,
+      "residual_pct": 5,
+      "account_asset": "1300",
+      "account_accum_depr": "1301",
+      "account_depr_expense": "6030",
+      "notes": "Office furniture, partitions, shelving"
+    },
+    {
+      "id": "MOTOR_VEHICLE",
+      "label": "Motor Vehicles",
+      "method": "DECLINING_BALANCE",
+      "useful_life_years": 4,
+      "residual_pct": 10,
+      "account_asset": "1300",
+      "account_accum_depr": "1301",
+      "account_depr_expense": "6030",
+      "notes": "Cars, vans, trucks — declining balance reflects faster early depreciation"
+    },
+    {
+      "id": "PLANT_MACHINERY",
+      "label": "Plant & Machinery",
+      "method": "STRAIGHT_LINE",
+      "useful_life_years": 10,
+      "residual_pct": 5,
+      "account_asset": "1300",
+      "account_accum_depr": "1301",
+      "account_depr_expense": "6030",
+      "notes": "Production machinery, generators, industrial equipment"
+    },
+    {
+      "id": "BUILDING",
+      "label": "Buildings (owned)",
+      "method": "STRAIGHT_LINE",
+      "useful_life_years": 40,
+      "residual_pct": 10,
+      "account_asset": "1300",
+      "account_accum_depr": "1301",
+      "account_depr_expense": "6030",
+      "notes": "Land is NOT depreciated — split land and building on acquisition"
+    },
+    {
+      "id": "LEASEHOLD_IMPROVEMENT",
+      "label": "Leasehold Improvements",
+      "method": "STRAIGHT_LINE",
+      "useful_life_years": 5,
+      "residual_pct": 0,
+      "account_asset": "1300",
+      "account_accum_depr": "1301",
+      "account_depr_expense": "6030",
+      "notes": "Depreciate over shorter of lease term or useful life"
+    },
+    {
+      "id": "ROU_ASSET",
+      "label": "Right-of-Use Assets (IFRS 16)",
+      "method": "STRAIGHT_LINE",
+      "useful_life_years": 3,
+      "residual_pct": 0,
+      "account_asset": "1304",
+      "account_accum_depr": "1301",
+      "account_depr_expense": "6032",
+      "notes": "Depreciate over lease term. Separate from owned PPE."
+    },
+    {
+      "id": "SOFTWARE",
+      "label": "Software & Licences (Intangible)",
+      "method": "STRAIGHT_LINE",
+      "useful_life_years": 3,
+      "residual_pct": 0,
+      "account_asset": "1302",
+      "account_accum_depr": "1303",
+      "account_depr_expense": "6031",
+      "notes": "Internally developed software may qualify for capitalisation under IAS 38"
+    },
+    {
+      "id": "OFFICE_EQUIPMENT",
+      "label": "Office Equipment",
+      "method": "STRAIGHT_LINE",
+      "useful_life_years": 5,
+      "residual_pct": 5,
+      "account_asset": "1300",
+      "account_accum_depr": "1301",
+      "account_depr_expense": "6030",
+      "notes": "Printers, photocopiers, projectors, phone systems"
+    },
+    {
+      "id": "GENERATOR",
+      "label": "Generator / Power Equipment",
+      "method": "STRAIGHT_LINE",
+      "useful_life_years": 7,
+      "residual_pct": 5,
+      "account_asset": "1300",
+      "account_accum_depr": "1301",
+      "account_depr_expense": "6030",
+      "notes": "Critical Nigerian business asset — typically higher maintenance cost in later years"
+    }
+  ],
+  "methods": {
+    "STRAIGHT_LINE": {
+      "formula": "Annual Depreciation = (Cost - Residual Value) / Useful Life (years)",
+      "characteristics": "Equal charge each year. Preferred by FIRS for most asset classes."
+    },
+    "DECLINING_BALANCE": {
+      "formula": "Annual Depreciation = Net Book Value × (2 / Useful Life)",
+      "characteristics": "200% declining balance (double declining). Higher charge in early years. Used for assets with faster economic obsolescence."
+    }
+  }
+}
