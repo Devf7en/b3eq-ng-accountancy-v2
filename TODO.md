@@ -1,8 +1,15 @@
 # b3Ɛq Nigerian Accountancy — Master TODO
 `tagged: b3Ɛq Nigerian Accountancy`
 
-> Living task list. Update status inline. Add new items at bottom of relevant phase.
+> Living roadmap. Keep this file current as the single source of truth for delivery, quality, and future-proof decisions.
 > Status: [ ] = todo  [~] = in progress  [x] = done  [!] = blocked/needs decision
+
+---
+
+## Current status
+- **Foundation is built:** repo, docs, module scaffold, data assets, n8n workflows, deploy scripts, and a working devcontainer exist.
+- **Next focus:** solidify Dolibarr native module behavior, complete deployment automation, and add compliance-grade process automation.
+- **Future-proofing themes:** containerized developer environment, API-first design, seed automation, clear documentation, and compliance-ready workflow orchestration.
 
 ---
 
@@ -10,253 +17,208 @@
 *Single source of truth. Everything downstream depends on this.*
 
 - [x] Create project monorepo structure
-- [x] Write README.md
-- [x] Write TODO.md (this file)
-- [x] Write CHANGELOG.md
-- [x] Write VERSION file (1.0.0)
-- [ ] Write `data/chart_of_accounts.json` — 90 accounts, full metadata
-- [ ] Write `data/tax_rates.json` — all NTA 2025 rates + effective dates
-- [ ] Write `data/compliance_calendar.json` — deadlines + penalties
-- [ ] Write `data/journals.json` — 9 journal definitions
-- [ ] Write `data/wht_types.json` — WHT table by transaction type
-- [ ] Write `docs/TAX_NOTES.md` — deep-dive references for each tax type
-- [ ] Write `docs/ARCHITECTURE.md` — system design and data flow diagram
-- [ ] Write `docs/BRANDING.md` — f7en token map (fonts, colours, variables)
-- [ ] Write `docs/DEPLOY.md` — multi-instance deploy walkthrough
+- [x] Write `README.md`
+- [x] Write `TODO.md` (this file)
+- [x] Write `CHANGELOG.md`
+- [x] Write `VERSION`
+- [x] Write `data/chart_of_accounts.json`
+- [x] Write `data/tax_rates.json`
+- [x] Write `data/compliance_calendar.json`
+- [x] Write `data/journals.json`
+- [x] Write `data/asset_depreciation_rules.json`
+- [x] Write `data/open_banking_providers.json`
+- [ ] Add `data/wht_types.json` — WHT table by transaction type and payer category
+- [ ] Add `docs/TAX_NOTES.md` — tax rule reference, FIRS/NTA citations, field mappings
+- [x] Write `docs/ARCHITECTURE.md`
+- [x] Write `docs/BRANDING_AND_DEPLOY.md`
+- [ ] Add `docs/DEPLOY.md` — multi-instance deploy and release checklist
+
+### Best-practice foundation
+- [ ] Add CI pipeline for linting, formatting, and artifact validation
+- [ ] Add automated end-to-end smoke tests for the devcontainer and Docker stack
+- [ ] Keep `data/*.json` as the authoritative seed source for both React and Dolibarr
+- [ ] Add a `docs/CHANGELOG_GUIDE.md` or release notes standard for future versions
+- [ ] Standardize semantic versioning and release tagging in `VERSION`
 
 ---
 
-## PHASE 1 — React Dashboard UI
-*Reference tool. Lives in Claude artifact. Deployable as standalone SPA.*
+## PHASE 1 — React Dashboard & Data App
+*Modern reference UI that validates the product experience and accelerates customer feedback.*
 
-- [x] Initial React component — b3eq-nigerian-accountancy.jsx
-- [x] Tab 1: Chart of Accounts (searchable, filterable, 90 accounts)
-- [x] Tab 2: Tax Rates & Codes (expandable by category, NTA 2025)
-- [x] Tab 3: Journals Setup (9 journals with Dolibarr path refs)
-- [x] Tab 4: Compliance Calendar (deadlines + penalties)
-- [x] Tab 5: WHT Calculator (live calc + journal entry + TIN toggle)
-- [x] Tab 6: VAT Declaration Workbench (input/output + net payable)
-- [x] Tab 7: Dolibarr Import Guide (8-step config walkthrough)
-- [ ] **Rebrand UI to f7en sovereign palette** — see docs/BRANDING.md
-  - [ ] Replace blue accent (#0891b2) with f7en red (#e4001b)
-  - [ ] Replace DM Sans with Syne (headings) + Space Mono (code)
-  - [ ] Apply gold (#c8a84b) authority accents on key metrics
-  - [ ] Update background gradient to near-black purple-tinted base
-  - [ ] Update tab active state to red/orange gradient
-  - [ ] Update section title accent line to red → orange → transparent
-- [ ] Pull live data from `data/*.json` (replace hardcoded arrays)
-- [ ] Add Tab 8: Payroll Calculator (PAYE bands + pension + NHF + NSITF)
-- [ ] Add Tab 9: CIT Estimator (size classification + dev levy + minimum tax)
-- [ ] Add Tab 10: Annual Compliance Checklist (printable, checkable)
-- [ ] Add Tab 11: State Taxes reference (LIRS, RIRS, cross-state notes)
-- [ ] Add export buttons: COA → CSV, Tax Rates → PDF, WHT result → PDF
-- [ ] Mobile responsive pass (works on phone for field use)
-- [ ] Dark/light toggle (default dark)
+- [x] Initial React app shell: `react/b3eq-advanced-ui.jsx`
+- [ ] Replace hardcoded UI data with live JSON-driven data from `data/*.json`
+- [ ] Add reusable dashboard components for COA, taxes, journals, compliance, WHT, VAT, payroll, and CIT
+- [ ] Add dark/light theme support with a default brand-forward dark mode
+- [ ] Make the app mobile-first and responsive for field use
+- [ ] Build export features: COA → CSV, tax tables → PDF, compliance checklist → PDF
+- [ ] Rebrand UI to the f7en palette and typography system
+- [ ] Add an interactive annual compliance checklist with state and print support
+- [ ] Add a payroll calculator for PAYE, pension, NHF, and NSITF
+- [ ] Add a CIT estimator with size classification, minimum tax, and development levy logic
+- [ ] Add state tax reference content for LIRS/RIRS and multi-state notes
+- [ ] Add a deployable SPA mode for customer demos and partner review
+
+### React future-proof upgrades
+- [ ] Separate UI/logic into data, business, and presentation layers
+- [ ] Use JSON-driven configuration for tabs, tables, and data mappings
+- [ ] Add analytics hooks for feature usage and onboarding friction
+- [ ] Add a theme config file and design tokens for consistent branding
 
 ---
 
 ## PHASE 2 — Dolibarr Native PHP Module
-*The real thing. Installs into b3Ɛq / Dolibarr as a first-class module.*
+*The production-grade module that installs into Dolibarr and owns Nigerian accounting workflows.*
 
-### 2A — Module Scaffold
+### 2A — Module scaffold and registration
 - [x] Create directory structure: `dolibarr/htdocs/custom/b3eqng/`
-- [ ] Write `modB3eqng.class.php` — module descriptor, version, menus, rights
-- [ ] Write `core/modules/modB3eqng.class.php` — module registration
-- [ ] Write `langs/en_US/b3eqng.lang` — all English string keys
-- [ ] Register module in Dolibarr module list (test activation/deactivation)
+- [ ] Confirm or complete `modB3eqng.class.php` — descriptor, menus, permissions, version
+- [ ] Confirm or complete `core/modules/modB3eqng.class.php` — module registration and dependencies
+- [ ] Update `langs/en_US/b3eqng.lang` with all module labels and user-facing strings
+- [ ] Verify activation/deactivation flow in Dolibarr module list
 
-### 2B — SQL Layer
-- [ ] Write `sql/llx_b3eqng_create.sql` — custom tables (audit log, WHT register)
-- [ ] Write `sql/llx_b3eqng_seed.sql` — full seed:
-  - [ ] Chart of Accounts → `llx_accounting_account`
-  - [ ] VAT rates → `llx_c_tva`
-  - [ ] WHT codes → `llx_c_chargesociales`
-  - [ ] Journals → `llx_accounting_journal`
-  - [ ] Tax accounts binding → `llx_accounting_account_chartofaccount`
-- [ ] Write `sql/llx_b3eqng_drop.sql` — clean uninstall (idempotent)
-- [ ] Test seed on clean Dolibarr 17+ instance
-- [ ] Test seed idempotency (run twice, no duplicates)
+### 2B — SQL layer and seed automation
+- [x] Provide `sql/llx_b3eqng_create.sql`
+- [x] Provide `sql/llx_b3eqng_seed.sql`
+- [x] Provide `sql/llx_b3eqng_drop.sql`
+- [ ] Validate the seed implementation against clean Dolibarr 17+ and 18+ instances
+- [ ] Add idempotent seed semantics and safe rerun behavior
+- [ ] Add schema comments or docs for custom tables and audit fields
 
-### 2C — Admin & Config Pages
-- [ ] Write `admin/setup.php` — module settings page
-  - [ ] Entity selector (multi-entity support)
-  - [ ] Company size toggle (small/medium/large → auto-sets CIT rate)
-  - [ ] VAT registration status + VAT number field
-  - [ ] TIN field (FIRS TIN for WHT exemption logic)
-  - [ ] State of registration (for PAYE → routes to correct SIRS)
-  - [ ] Fiscal year start/end
-- [ ] Write `admin/about.php` — module info + version + changelog
+### 2C — Admin & configuration
+- [x] Provide `admin/setup.php`
+- [ ] Add `admin/about.php` for module info, changelog, and support guidance
+- [ ] Add entity registration settings for multi-company support
+- [ ] Add VAT registration, TIN, state registration, and fiscal year configuration
+- [ ] Add security controls for admin access and config changes
 
-### 2D — Functional Pages
-- [ ] Write `pages/coa.php` — Chart of Accounts browser
-- [ ] Write `pages/taxes.php` — Tax rates reference
-- [ ] Write `pages/wht_calc.php` — WHT calculator (PHP version)
-- [ ] Write `pages/vat_return.php` — VAT declaration workbench
-  - [ ] Pull from Dolibarr invoices for the period (auto-aggregate)
-  - [ ] Generate FIRS-format VAT return summary
-  - [ ] One-click journal entry creation for VAT payment
-- [ ] Write `pages/compliance.php` — Compliance calendar + status dashboard
-  - [ ] Show RED/AMBER/GREEN status for each obligation
-  - [ ] Link to Dolibarr journal for each completed remittance
+### 2D — Functional business pages
+- [x] Provide `pages/coa.php`
+- [x] Provide `pages/taxes.php`
+- [x] Provide `pages/wht_calc.php`
+- [x] Provide `pages/vat_return.php`
+- [x] Provide `pages/compliance.php`
+- [x] Provide `pages/payroll.php`
+- [x] Provide `pages/cit_estimator.php`
+- [x] Provide `pages/assets.php`
+- [x] Provide `pages/audit_trail.php`
+- [x] Provide `pages/fx_revaluation.php`
+- [ ] Enhance `vat_return.php` to auto-aggregate invoice values and generate FIRS-ready summaries
+- [ ] Add compliance status badges and links to related journals
 
-### 2E — Business Logic (Class Layer)
-- [ ] Write `class/b3eqng.class.php` — core logic:
-  - [ ] `calculateWHT($amount, $type, $hasTIN)` → returns deduction breakdown
-  - [ ] `calculateVAT($invoiceLines)` → returns output/input/net
-  - [ ] `calculatePAYE($grossSalary, $reliefs)` → returns PAYE deduction
-  - [ ] `calculatePension($basicHousingTransport)` → employer + employee
-  - [ ] `calculateCIT($turnover, $profit)` → size classification + levy
-  - [ ] `getComplianceStatus($period)` → all obligations status for period
-  - [ ] `seedNigerianData($db, $entity)` → programmatic seed call
-- [ ] Write `class/api_b3eqng.class.php` — REST API wrapper:
-  - [ ] GET `/api/b3eqng/coa` — return chart of accounts
-  - [ ] GET `/api/b3eqng/taxrates` — return current tax rates
-  - [ ] POST `/api/b3eqng/wht/calculate` — WHT calc endpoint
-  - [ ] POST `/api/b3eqng/vat/return` — VAT return calculation
-  - [ ] GET `/api/b3eqng/compliance/{period}` — compliance status
+### 2E — Business logic classes
+- [x] Provide `class/b3eqng.class.php`
+- [x] Provide `class/api_b3eqng.class.php`
+- [x] Provide `class/b3eqng_init.php`
+- [x] Provide `class/audit_logger.class.php`
+- [ ] Review and consolidate business logic for WHT, VAT, PAYE, CIT, pension, and compliance
+- [ ] Add API endpoints for chart of accounts, tax rates, WHT calc, VAT return, and compliance status
+- [ ] Document internal class responsibilities and extension points
 
-### 2F — Hooks & Triggers (Auto-behaviour)
-- [ ] Hook: on Customer Invoice validation → auto-post Output VAT to 2100
-- [ ] Hook: on Supplier Invoice validation → auto-post Input VAT to 1101
-- [ ] Hook: on Supplier Payment → auto-deduct WHT based on supplier category
-- [ ] Hook: on Payroll run → auto-post PAYE (2120), Pension (2121/2122), NSITF (2124), NHF (2123)
-- [ ] Trigger: on month-end → generate compliance reminder notifications
-- [ ] Trigger: on 20th of month → auto-generate WHT schedule draft
+### 2F — Hooks and workflow automation
+- [ ] Add invoice validation hook to post output VAT automatically
+- [ ] Add supplier invoice hook to post input VAT automatically
+- [ ] Add supplier payment hook to apply WHT deductions automatically
+- [ ] Add payroll hook to generate PAYE, pension, NHF, and NSITF journal drafts
+- [ ] Add scheduled reminders for compliance milestones and filings
 
-### 2G — CSS / Brand
-- [ ] Write `css/b3eqng.css` — f7en brand overrides for module pages:
-  - [ ] Import Syne + Space Mono from Google Fonts
-  - [ ] Override `.dolibarr-module-header` with dark/red palette
-  - [ ] Style `.b3eq-tax-badge`, `.b3eq-calc-row`, `.b3eq-journal-entry`
-  - [ ] Match sovereign dark aesthetic from apps.f7en.biz
+### 2G — CSS / brand polish
+- [x] Provide `css/b3eqng.css`
+- [ ] Apply f7en brand overrides to Dolibarr module pages
+- [ ] Add dark module skin, typographic scale, and token-driven spacing
+- [ ] Ensure consistent brand experience across Dolibarr and React UIs
 
 ---
 
-## PHASE 3 — Multi-Instance Deploy Pipeline
-*One command pushes the module to any b3Ɛq Dolibarr instance.*
+## PHASE 3 — Deployment & provisioning
+*One command deploys the module to any b3Ɛq instance, with validation and rollback support.*
 
-### 3A — SSH Deploy (direct server access)
-- [ ] Write `scripts/deploy.sh`:
-  - [ ] Accept `--target` (host), `--user`, `--path` (docroot), `--db-name`
-  - [ ] rsync `dolibarr/htdocs/custom/b3eqng/` to target
-  - [ ] Execute SQL seed on remote DB
-  - [ ] Activate module via Dolibarr DB flag (`llx_const`)
-  - [ ] Run health check
-- [ ] Write `scripts/health_check.sh`:
-  - [ ] Verify module directory exists and is readable
-  - [ ] Verify `llx_accounting_account` has ≥ 90 NG records
-  - [ ] Verify `llx_c_tva` has NG-VAT-75 rate
-  - [ ] Verify journals JV-TX and JV-SA exist
-  - [ ] Output JSON status report
+### 3A — SSH / CLI deploy
+- [x] Provide `scripts/deploy.sh`
+- [x] Provide `scripts/health_check.sh`
+- [ ] Harden `deploy.sh` for safe rsync, remote SQL execution, and configuration validation
+- [ ] Harden `health_check.sh` to return machine-readable status and fail fast on missing module assets
+- [ ] Add deploy validation for Dolibarr version, module path, and DB seed state
 
-### 3B — API Deploy (no SSH, REST only)
-- [ ] Write `scripts/seed_via_api.sh`:
-  - [ ] Accept `DOLI_URL` + `DOLI_KEY` env vars
-  - [ ] POST each COA account via `/api/index.php/accountingaccounts`
-  - [ ] POST each VAT code via `/api/index.php/setup/vat`
-  - [ ] Verify seeded counts
-  - [ ] Output pass/fail per entity type
-- [ ] Handle idempotency (check before POST, skip if exists)
-- [ ] Handle pagination for large seeds
+### 3B — API-based provisioning
+- [x] Provide `scripts/seed_via_api.sh`
+- [ ] Expand API deploy to support idempotent seeding, retries, and soft validation
+- [ ] Add support for Dolibarr API credential rotation and secure storage
+- [ ] Add a snapshot / dry-run mode for pre-deploy validation
 
-### 3C — n8n Multi-Instance Deployer Workflow
-- [ ] Write `n8n/workflows/multi_instance_deploy.json`:
-  - [ ] Webhook trigger: accepts `{ target_url, api_key, entity_id }`
-  - [ ] HTTP Request: test connection to target
-  - [ ] HTTP Requests: seed COA, VAT codes, WHT codes, journals
-  - [ ] Verification step: count seeded records
-  - [ ] Notification: Slack/email with pass/fail report
-  - [ ] Error handling: rollback on partial failure
-- [ ] Build admin UI for the deployer (small dashboard card in b3Ɛq)
-  - [ ] Input: target URL + API key
-  - [ ] Button: "Deploy b3Ɛq NG Accounting"
-  - [ ] Live log: streaming deploy status
+### 3C — n8n multi-instance deploy
+- [x] Provide `n8n/workflows/multi_instance_deploy.json`
+- [ ] Add webhook-triggered deploy workflow with full success/failure reporting
+- [ ] Add rollback or cleanup step for partial deployments
+- [ ] Add live deploy reporting to Slack/Teams/WhatsApp
 
 ---
 
-## PHASE 4 — n8n Compliance Automation
-*Quantum Middleware keeps you compliant automatically.*
+## PHASE 4 — Compliance automation
+*Middleware that keeps the business on time with VAT, WHT, PAYE, and regulatory filings.*
 
-- [ ] Write `n8n/workflows/vat_monthly_reminder.json`:
-  - [ ] Cron: 15th of every month, 09:00 WAT
-  - [ ] Query Dolibarr API for all sales invoices in previous month
-  - [ ] Query Dolibarr API for all purchase invoices in previous month
-  - [ ] Calculate Output VAT, Input VAT, net payable
-  - [ ] Send summary to WhatsApp/Slack/email: "VAT due 21st — ₦X,XXX payable"
-  - [ ] Create draft journal entry in b3Ɛq for VAT payment
-- [ ] Write `n8n/workflows/wht_monthly_schedule.json`:
-  - [ ] Cron: 20th of every month, 09:00 WAT
-  - [ ] Query all supplier payments in previous month with WHT codes
-  - [ ] Generate WHT schedule CSV (Form A format)
-  - [ ] Email schedule to finance team
-  - [ ] Create remittance journal entry draft
-- [ ] Write `n8n/workflows/paye_monthly_export.json`:
-  - [ ] Cron: 5th of every month, 09:00 WAT
-  - [ ] Pull payroll data from b3Ɛq HR module
-  - [ ] Calculate PAYE per employee + totals
-  - [ ] Export SIRS-format CSV
-  - [ ] Post reminder: "PAYE due 10th — ₦X,XXX for N employees"
-- [ ] Write `n8n/workflows/compliance_dashboard.json`:
-  - [ ] Cron: daily 08:00 WAT
-  - [ ] Check each obligation against last-filed date
-  - [ ] Output RED (overdue) / AMBER (due within 5 days) / GREEN (filed)
-  - [ ] Post daily digest to Slack/WhatsApp
-- [ ] Write `n8n/templates/vat_return_template.csv` — FIRS format
-- [ ] Write `n8n/templates/wht_schedule_template.csv` — Form A format
-- [ ] Write `n8n/templates/paye_schedule_template.csv` — SIRS format
+- [x] Provide `n8n/workflows/vat_monthly_reminder.json`
+- [x] Provide `n8n/workflows/wht_monthly_schedule.json`
+- [x] Provide `n8n/workflows/compliance_dashboard.json`
+- [ ] Add `n8n/workflows/paye_monthly_export.json`
+- [ ] Add template files for CSV exports and forms
+- [ ] Add calendar-driven reminders and cross-channel notifications
+- [ ] Add audit trail for automated compliance actions and approvals
 
 ---
 
-## PHASE 5 — TaxPro Max Integration (e-invoicing NTA 2025 Mandate)
-*All VAT-registered businesses must adopt FIRS e-invoicing under NTA 2025.*
+## PHASE 5 — E-invoicing & tax portal integration
+*Prepare for NTA 2025 mandates and future government API requirements.*
 
-- [ ] Research TaxPro Max API endpoints and authentication
-- [ ] Write n8n workflow: on Invoice Validated → POST to TaxPro Max
-- [ ] Map Dolibarr invoice fields to TaxPro Max schema
-- [ ] Handle TaxPro Max IRN (Invoice Reference Number) → store in invoice notes
-- [ ] Handle API failures gracefully (queue + retry)
-- [ ] Write compliance check: verify all invoices >₦25k have IRN
-- [ ] Document TaxPro Max field mapping in docs/TAX_NOTES.md
+- [ ] Research TaxPro Max / NTA API contracts and auth flows
+- [ ] Add invoice IRN generation and capture for VAT filings
+- [ ] Add API retry, queueing, and fallback handling for external tax services
+- [ ] Validate every invoice > ₦25,000 is traceable to a tax reference
+- [ ] Document the integration and compliance monitoring process
 
 ---
 
-## PHASE 6 — State-Level Taxes
-*LIRS (Lagos), RIRS (Rivers), OIRSA (Ogun), etc.*
+## PHASE 6 — State tax support
+*Add coverage for Lagos, Rivers, Ogun, and other regional tax regimes.*
 
-- [ ] Map state-level personal income tax rules (where they differ from federal)
-- [ ] Add `data/state_tax_rules.json` — per-state PAYE routing + rates
-- [ ] Admin setting: entity state registration → auto-routes PAYE remittance
-- [ ] Add LIRS-specific levies (Development Levy, Business Premises Levy)
-- [ ] Add RIRS-specific levies
-- [ ] n8n workflow: PAYE export split by state if multi-state employees
+- [ ] Add `data/state_tax_rules.json` for PAYE routing and state levies
+- [ ] Add state registration config and compliance workflow
+- [ ] Add state-specific calculation engines for LIRS, RIRS, and OIRSA
+- [ ] Add split exports for multi-state payroll and remittance
 
 ---
 
-## PHASE 7 — Multi-Tenant SaaS Mode
-*Monetise: sell b3Ɛq NG Accounting to other Nigerian SMEs.*
+## PHASE 7 — SaaS / multi-tenant mode
+*Build the platform foundation to sell Nigerian accounting as a service.*
 
-- [ ] Design multi-tenant entity model (one b3Ɛq instance, many client entities)
-- [ ] Per-entity onboarding: company size, state, VAT status, TIN
-- [ ] Per-entity tax rate overrides (pioneer status, incentives)
-- [ ] Billing integration: charge per-entity per-month
-- [ ] White-label: rebrand module for client-facing delivery
-- [ ] Build landing page: "b3Ɛq NG Accounting — Nigeria's first NTA 2025-native ERP module"
-- [ ] Dolistore listing (optional public distribution)
+- [ ] Define a multi-tenant data model for entities, tax profiles, and billing
+- [ ] Add per-entity onboarding and configurable tax preferences
+- [ ] Add billing, metering, and subscription controls
+- [ ] Add white-label packaging for reseller distribution
+- [ ] Add landing page and commercial messaging for product launch
 
 ---
 
-## BACKLOG / IDEAS
-*Not scheduled. Add when relevant.*
+## Cross-cutting best practices
+- [ ] Add CI/CD as code for Docker, PHP, JS, and n8n artifacts
+- [ ] Add static analysis / linting for PHP, JSON, shell scripts, and React
+- [ ] Add automated smoke tests for module install, seed, and page load
+- [ ] Add security review checklist for configuration, secrets, and network access
+- [ ] Keep business logic data-driven and decoupled from presentation
+- [ ] Maintain a single source of truth in `data/` and use it for both UI and seed logic
+- [ ] Keep docs living: update architecture, branding, deploy, and compliance docs with every release
 
-- [ ] Transfer Pricing documentation module (for MNE groups)
-- [ ] Pioneer Status / EDI tax credit tracker (5% annual credit)
-- [ ] Audit trail: immutable log of all tax filings and remittances
+---
+
+## Backlog / future ideas
+- [ ] Transfer pricing and related documentation module
+- [ ] Pioneer status and special incentive tracker
+- [ ] Immutable audit log of all tax filings and remittances
 - [ ] FIRS TIN verification API integration
-- [ ] CAC (Corporate Affairs Commission) annual return reminder
-- [ ] Pension fund (PFA) remittance tracker with RSA PIN validation
-- [ ] PENCOM compliance reports
-- [ ] Foreign currency tax treatment (CBN rate sourcing for FX gain/loss)
-- [ ] Sector-specific: Oil & Gas (PPT), Banking (FSS), Insurance modules
+- [ ] CAC annual return reminder and business registry sync
+- [ ] PFA / pension fund remittance tracker with RSA PIN validation
+- [ ] PENCOM compliance reports and state processing
+- [ ] Foreign currency tax treatment with CBN rate sourcing
+- [ ] Sector-specific compliance submodules (Oil & Gas, Banking, Insurance)
 
 ---
 
@@ -270,5 +232,5 @@
 
 ---
 
-*Last updated: 2026-06-07*  
+*Last updated: 2026-06-07*
 *Owner: dev.f7en / Foundations Aesthetics Resource / DCRI-PPS SmartAPPS*
