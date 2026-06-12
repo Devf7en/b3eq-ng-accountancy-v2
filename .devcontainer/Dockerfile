@@ -30,7 +30,7 @@ RUN apt-get update \
 
 WORKDIR /var/www/html
 RUN mkdir -p /var/www/html/custom \
-    && wget -qO /tmp/dolibarr.zip https://github.com/Dolibarr/dolibarr/releases/download/${DOLIBARR_VERSION}/dolibarr-${DOLIBARR_VERSION}.zip \
+    && wget -qO /tmp/dolibarr.zip https://github.com/Dolibarr/dolibarr/archive/refs/tags/${DOLIBARR_VERSION}.zip \
     && unzip /tmp/dolibarr.zip -d /tmp \
     && mv /tmp/dolibarr-${DOLIBARR_VERSION}/* /var/www/html/ \
     && rm -rf /tmp/dolibarr.zip /tmp/dolibarr-${DOLIBARR_VERSION} \
