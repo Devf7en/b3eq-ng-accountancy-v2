@@ -34,7 +34,7 @@
 - [ ] Add `docs/DEPLOY.md` — multi-instance deploy and release checklist
 
 ### Best-practice foundation
-- [ ] Add CI pipeline for linting, formatting, and artifact validation
+- [ ] Extend existing CI workflow in `.github/workflows/ci.yml` to cover linting, formatting, and artifact validation
 - [ ] Add automated end-to-end smoke tests for the devcontainer and Docker stack
 - [ ] Keep `data/*.json` as the authoritative seed source for both React and Dolibarr
 - [ ] Add a `docs/CHANGELOG_GUIDE.md` or release notes standard for future versions
@@ -229,8 +229,9 @@
 |---|---|---|
 | 2026-06-07 | Session 1 | React dashboard (7 tabs), all data arrays, WHT calc, VAT workbench, Dolibarr guide |
 | 2026-06-07 | Session 2 | README, TODO, CHANGELOG, VERSION, data JSONs, SQL seed, PHP module skeleton, deploy scripts, n8n workflows |
+| 2026-06-12 | Session 3 | Refined TODO roadmap, confirmed repo status, updated CI and compliance delivery notes |
 
 ---
 
-*Last updated: 2026-06-07*
+*Last updated: 2026-06-12*
 *Owner: dev.f7en / Foundations Aesthetics Resource / DCRI-PPS SmartAPPS*
