@@ -1,0 +1,36 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Docker Compose: Up",
+      "type": "shell",
+      "command": "docker compose up -d",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker Compose: Down",
+      "type": "shell",
+      "command": "docker compose down",
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker Compose: Build dolibarr",
+      "type": "shell",
+      "command": "docker compose build --quiet dolibarr",
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Validate PHP module",
+      "type": "shell",
+      "command": "cd dolibarr/htdocs/custom/b3eqng && php test/test_runner.php",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

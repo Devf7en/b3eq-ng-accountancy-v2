@@ -4,7 +4,19 @@
   "service": "dolibarr",
   "workspaceFolder": "/workspace",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
-  "remoteUser": "www-data",
+  "runServices": ["db", "dolibarr"],
+  "shutdownAction": "stopCompose",
+  "forwardPorts": [8080, 8081, 5678],
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "php.validate.executablePath": "/usr/local/bin/php",
+    "editor.formatOnSave": true,
+    "files.exclude": {
+      "**/.git": true,
+      "**/node_modules": true,
+      "**/.DS_Store": true
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -15,6 +27,5 @@
       ]
     }
   },
-  "postCreateCommand": "composer --version || true",
-  "shutdownAction": "stopCompose"
+  "postCreateCommand": "composer --version || true"
 }

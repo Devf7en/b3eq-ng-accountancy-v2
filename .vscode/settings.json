@@ -1,0 +1,24 @@
+{
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000,
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "editor.detectIndentation": false,
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/.DS_Store": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.git/**": true,
+    "**/.devcontainer/**": true
+  },
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "workbench.startupEditor": "none",
+  "workbench.editor.enablePreview": false,
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "remote.containers.autoremove": true,
+  "remote.containers.dockerComposeFileVersion": "3"
+}
