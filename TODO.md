@@ -135,7 +135,7 @@
 ### 3A — SSH / CLI deploy
 - [x] Provide `scripts/deploy.sh`
 - [x] Provide `scripts/health_check.sh`
-- [ ] Harden `deploy.sh` for safe rsync, remote SQL execution, and configuration validation
+- [x] Harden `deploy.sh` for safe rsync, remote SQL execution, and configuration validation
 - [ ] Harden `health_check.sh` to return machine-readable status and fail fast on missing module assets
 - [ ] Add deploy validation for Dolibarr version, module path, and DB seed state
 

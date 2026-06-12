@@ -52,6 +52,28 @@ ok()     { echo -e "${GREEN}[OK]${RESET} $*"; }
 warn()   { echo -e "${YELLOW}[WARN]${RESET} $*"; }
 fail()   { echo -e "${RED}[FAIL]${RESET} $*"; exit 1; }
 banner() { echo -e "\n${BOLD}${CYAN}═══════════════════════════════════════${RESET}"; echo -e "${BOLD}  $*${RESET}"; echo -e "${BOLD}${CYAN}═══════════════════════════════════════${RESET}\n"; }
+usage() {
+  cat <<EOF
+Usage: ${0##*/} --host HOST --db-pass PASSWORD [options]
+
+Options:
+  --host HOST         Remote host or IP address
+  --user USER         SSH user (default: deploy)
+  --port PORT         SSH port (default: 22)
+  --docroot PATH      Dolibarr document root (default: /var/www/dolibarr/htdocs)
+  --db-host HOST      MySQL host on remote (default: 127.0.0.1)
+  --db-name NAME      MySQL database name (default: dolibarr)
+  --db-user USER      MySQL user (default: dolibarr)
+  --db-pass PASS      MySQL password
+  --entity ID         Dolibarr entity ID (default: 1)
+  --dry-run           Show actions without making changes
+  --help              Print this help and exit
+EOF
+  exit 0
+}
+command_exists() {
+  command -v "$1" >/dev/null 2>&1 || fail "$1 is required but not installed"
+}
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
@@ -66,56 +88,48 @@ while [[ $# -gt 0 ]]; do
     --entity)     ENTITY="$2";     shift 2 ;;
     --port)       SSH_PORT="$2";   shift 2 ;;
     --dry-run)    DRY_RUN=true;    shift ;;
+    --help)       usage ;;
     *) fail "Unknown argument: $1" ;;
   esac
-done
+ done
 
-[[ -z "$HOST" ]]    && fail "--host is required (e.g. ten.f7en.net)"
-[[ -z "$DB_PASS" ]] && fail "--db-pass is required"
+[[ -z "$HOST" ]] && fail "--host is required (e.g. ten.f7en.net)"
+if [[ -z "${DB_PASS:-}" ]]; then
+  read -s -p "Database password: " DB_PASS
+  echo
+fi
+[[ -z "${DB_PASS:-}" ]] && fail "--db-pass is required"
 [[ -d "$MODULE_SRC" ]] || fail "Module source not found at: $MODULE_SRC"
 
-SSH_CMD="ssh -p $SSH_PORT ${SSH_USER}@${HOST}"
-RSYNC_CMD="rsync -avz --delete -e 'ssh -p $SSH_PORT'"
+command_exists ssh
+command_exists rsync
+command_exists mysql
+command_exists sed
 
-# ── Start ─────────────────────────────────────────────────────────────────────
-banner "b3Ɛq Nigerian Accountancy — Deploy to $HOST"
-log "Target:   ${SSH_USER}@${HOST}:${DOCROOT}/custom/b3eqng"
-log "Database: ${DB_USER}@${DB_HOST}/${DB_NAME} (entity ${ENTITY})"
-log "Dry run:  ${DRY_RUN}"
-
-# ── Step 1: Test SSH connection ───────────────────────────────────────────────
-log "Step 1/5 — Testing SSH connection..."
-if $SSH_CMD "echo 'SSH OK'" &>/dev/null; then
-  ok "SSH connection established"
-else
-  fail "Cannot connect to ${SSH_USER}@${HOST}. Check SSH key auth."
-fi
-
-# ── Step 2: Verify Dolibarr installation ─────────────────────────────────────
-log "Step 2/5 — Verifying Dolibarr installation..."
-DOLI_CHECK=$($SSH_CMD "test -f ${DOCROOT}/main.inc.php && echo FOUND || echo MISSING")
-if [[ "$DOLI_CHECK" == "FOUND" ]]; then
-  ok "Dolibarr found at ${DOCROOT}"
-else
-  fail "Dolibarr main.inc.php not found at ${DOCROOT}. Check --docroot."
-fi
-
-# ── Step 3: Rsync module files ────────────────────────────────────────────────
+SSH_CMD="ssh -o BatchMode=yes -p ${SSH_PORT} ${SSH_USER}@${HOST}"
+RSYNC_CMD="rsync -avz --delete --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r -e 'ssh -o BatchMode=yes -p ${SSH_PORT}'"
 log "Step 3/5 — Syncing module files..."
+REMOTE_MODULE="${DOCROOT}/custom/b3eqng"
+REMOTE_BACKUP="${DOCROOT}/custom/b3eqng.bak.$(date +%Y%m%d%H%M%S)"
+
 if [[ "$DRY_RUN" == "true" ]]; then
-  warn "DRY RUN — would rsync: $MODULE_SRC → ${SSH_USER}@${HOST}:${DOCROOT}/custom/b3eqng"
+  warn "DRY RUN — would rsync: $MODULE_SRC → ${SSH_USER}@${HOST}:${REMOTE_MODULE}"
+  warn "DRY RUN — would create remote backup if ${REMOTE_MODULE} exists"
 else
-  # Create custom dir if it doesn't exist
-  $SSH_CMD "mkdir -p ${DOCROOT}/custom"
+  $SSH_CMD "mkdir -p '${DOCROOT}/custom'"
 
-  rsync -avz --delete \
-    -e "ssh -p ${SSH_PORT}" \
+  if $SSH_CMD "test -d '${REMOTE_MODULE}'" &>/dev/null; then
+    log "Backing up existing remote module to ${REMOTE_BACKUP}"
+    $SSH_CMD "cp -a '${REMOTE_MODULE}' '${REMOTE_BACKUP}'"
+    ok "Remote backup created"
+  fi
+
+  $RSYNC_CMD \
     "${MODULE_SRC}/" \
-    "${SSH_USER}@${HOST}:${DOCROOT}/custom/b3eqng/"
+    "${SSH_USER}@${HOST}:${REMOTE_MODULE}/"
 
-  # Set correct permissions
-  $SSH_CMD "find ${DOCROOT}/custom/b3eqng -type f -exec chmod 644 {} \; && \
-            find ${DOCROOT}/custom/b3eqng -type d -exec chmod 755 {} \;"
+  $SSH_CMD "find '${REMOTE_MODULE}' -type f -exec chmod 644 {} \; && \
+            find '${REMOTE_MODULE}' -type d -exec chmod 755 {} \;"
 
   ok "Module files synced"
 fi
@@ -123,18 +137,29 @@ fi
 # ── Step 4: Run SQL seed ──────────────────────────────────────────────────────
 log "Step 4/5 — Seeding Nigerian accounting data..."
 if [[ "$DRY_RUN" == "true" ]]; then
-  warn "DRY RUN — would run: llx_b3eqng_seed.sql on ${DB_NAME}"
+  warn "DRY RUN — would run seed SQL on ${DB_NAME}"
 else
-  # Substitute entity if not 1
   SEED_SQL="${DOCROOT}/custom/b3eqng/sql/llx_b3eqng_seed.sql"
-
-  if [[ "$ENTITY" != "1" ]]; then
-    $SSH_CMD "sed 's/entity=1/entity=${ENTITY}/g; s/, 1,/, ${ENTITY},/g' \
-              ${SEED_SQL} | mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASS} ${DB_NAME}"
-  else
-    $SSH_CMD "mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASS} ${DB_NAME} < ${SEED_SQL}"
+  if ! $SSH_CMD "test -f '${SEED_SQL}'" >/dev/null 2>&1; then
+    fail "Seed SQL not found at ${SEED_SQL} on remote host"
   fi
 
+  REMOTE_MY_CNF=$($SSH_CMD "mktemp /tmp/b3eqng_mysql.XXXXXX")
+  $SSH_CMD "cat > '${REMOTE_MY_CNF}' <<'EOF'
+[client]
+user=${DB_USER}
+password=${DB_PASS}
+host=${DB_HOST}
+EOF
+chmod 600 '${REMOTE_MY_CNF}'"
+
+  if [[ "$ENTITY" != "1" ]]; then
+    $SSH_CMD "sed 's/entity=1/entity=${ENTITY}/g; s/, 1,/, ${ENTITY},/g' '${SEED_SQL}' | mysql --defaults-extra-file='${REMOTE_MY_CNF}' ${DB_NAME}"
+  else
+    $SSH_CMD "mysql --defaults-extra-file='${REMOTE_MY_CNF}' ${DB_NAME} < '${SEED_SQL}'"
+  fi
+
+  $SSH_CMD "rm -f '${REMOTE_MY_CNF}'"
   ok "SQL seed executed"
 fi
 
@@ -143,14 +168,19 @@ log "Step 5/5 — Running health check..."
 if [[ "$DRY_RUN" == "true" ]]; then
   warn "DRY RUN — would verify seeded record counts"
 else
-  COA_COUNT=$($SSH_CMD "mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASS} ${DB_NAME} \
-    -se \"SELECT COUNT(*) FROM llx_accounting_account WHERE fk_pcg_version='NG-IFRS-SME' AND entity=${ENTITY};\"" 2>/dev/null || echo 0)
-  VAT_COUNT=$($SSH_CMD "mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASS} ${DB_NAME} \
-    -se \"SELECT COUNT(*) FROM llx_c_tva WHERE note LIKE 'Nigeria%' AND entity=${ENTITY};\"" 2>/dev/null || echo 0)
-  WHT_COUNT=$($SSH_CMD "mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASS} ${DB_NAME} \
-    -se \"SELECT COUNT(*) FROM llx_c_chargesociales WHERE code LIKE 'NG-%' AND entity=${ENTITY};\"" 2>/dev/null || echo 0)
-  JNL_COUNT=$($SSH_CMD "mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASS} ${DB_NAME} \
-    -se \"SELECT COUNT(*) FROM llx_accounting_journal WHERE code LIKE 'JV-%' AND entity=${ENTITY};\"" 2>/dev/null || echo 0)
+  REMOTE_MY_CNF=$($SSH_CMD "mktemp /tmp/b3eqng_mysql.XXXXXX")
+  $SSH_CMD "cat > '${REMOTE_MY_CNF}' <<'EOF'
+[client]
+user=${DB_USER}
+password=${DB_PASS}
+host=${DB_HOST}
+EOF
+chmod 600 '${REMOTE_MY_CNF}'"
+
+  COA_COUNT=$($SSH_CMD "mysql --defaults-extra-file='${REMOTE_MY_CNF}' ${DB_NAME} -se \"SELECT COUNT(*) FROM llx_accounting_account WHERE fk_pcg_version='NG-IFRS-SME' AND entity=${ENTITY};\"" 2>/dev/null || echo 0)
+  VAT_COUNT=$($SSH_CMD "mysql --defaults-extra-file='${REMOTE_MY_CNF}' ${DB_NAME} -se \"SELECT COUNT(*) FROM llx_c_tva WHERE note LIKE 'Nigeria%' AND entity=${ENTITY};\"" 2>/dev/null || echo 0)
+  WHT_COUNT=$($SSH_CMD "mysql --defaults-extra-file='${REMOTE_MY_CNF}' ${DB_NAME} -se \"SELECT COUNT(*) FROM llx_c_chargesociales WHERE code LIKE 'NG-%' AND entity=${ENTITY};\"" 2>/dev/null || echo 0)
+  JNL_COUNT=$($SSH_CMD "mysql --defaults-extra-file='${REMOTE_MY_CNF}' ${DB_NAME} -se \"SELECT COUNT(*) FROM llx_accounting_journal WHERE code LIKE 'JV-%' AND entity=${ENTITY};\"" 2>/dev/null || echo 0)
 
   echo ""
   echo "  Chart of Accounts:  ${COA_COUNT} accounts  (expected ≥90)"
@@ -167,15 +197,15 @@ else
 
   if [[ "$PASS" == "true" ]]; then
     ok "Health check PASSED"
+    $SSH_CMD "mysql --defaults-extra-file='${REMOTE_MY_CNF}' ${DB_NAME} -e \"INSERT IGNORE INTO llx_const (name, value, type, entity) VALUES ('MAIN_MODULE_B3EQNG', '1', 'chaine', ${ENTITY});\"" 2>/dev/null
+    ok "Module activation flag set in llx_const"
   else
-    warn "Health check had warnings — review above counts"
+    warn "Health check failed — deployment halted"
+    $SSH_CMD "rm -f '${REMOTE_MY_CNF}'"
+    fail "One or more health checks did not pass"
   fi
 
-  # ── Activate module via Dolibarr constant store ───────────────────────────
-  $SSH_CMD "mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASS} ${DB_NAME} \
-    -e \"INSERT IGNORE INTO llx_const (name, value, type, entity) \
-        VALUES ('MAIN_MODULE_B3EQNG', '1', 'chaine', ${ENTITY});\"" 2>/dev/null
-  ok "Module activation flag set in llx_const"
+  $SSH_CMD "rm -f '${REMOTE_MY_CNF}'"
 fi
 
 # ── Done ─────────────────────────────────────────────────────────────────────
